@@ -42,7 +42,7 @@ Sending message from client A to client B. Bridge returns error if ttl is too hi
 
 ```tsx
 request
-    POST /message?client_id=<to_hex_str(A)>?to=<to_hex_str(B)>&ttl=300&topic=<sendTransaction|signData|sendInstantTransaction>
+    POST /message?client_id=<to_hex_str(A)>?to=<to_hex_str(B)>&ttl=300&topic=<sendTransaction|signData|makeSendTransactionIntent|makeSignDataIntent>
 
     body: <base64_encoded_message>
 ```
