@@ -49,6 +49,6 @@ The object storage responds with the stored object:
 }
 ```
 
-Object Storage removes the object as soon as it is retrieved, or when the TTL expires, whichever comes first.
+Object Storage removes the object when the TTL expires.
 
 If the object was not found (expired or never existed), the storage should respond with HTTP 404.
