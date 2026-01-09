@@ -578,15 +578,14 @@ All intent payloads share the following base fields:
 
 - The app generates its session key pair and the wallet's key pair.
 - The app constructs the intent payload and encrypts it with the wallet public key as described in the [Session protocol](session.md#encryption).
-- The app computes the hash of the encrypted payload and uploads it to the central bridge (`https://connect.ton.org/bridge`) and optionally to the wallet-specific bridge when the user picks a particular wallet.
+- The app uploads the encrypted payload to the object_storage with TTL.
+- The app receives a `get_url` - URL to get stored intent from the object_storage.
 - To hand off the request it generates a TonConnect deep link of the form  
-  `tc://intent?id=<client_pub_key>&pk=<wallet_pk>&hash=<encrypted_payload_hash_hex>&bridge_url=<bridge_url>`, where:
+  `tc://intent?id=<client_pub_key>&pk=<wallet_pk>&get_url=<get_url>`, where:
     - `id` is the app client ID (public key) encoded as hex.
     - `pk` is the wallet private key encoded as hex.
-    - `hash` is the SHA256 hash of the encrypted payload, encoded as hex.
-    - `bridge_url` is the URL of the bridge where the encrypted payload was uploaded.
-- The wallet scans the link and connects to the bridge using the `id` and public key derived from `pk`.
-- The wallet waits for the bridge message with a payload with the corresponding hash.
+    - `get_url` is the URL to get stored intent from the object_storage.
+- The wallet scans the link and retrieves the encrypted payload from the object_storage using the `get_url`.
 - The wallet decrypts the message as described in the [Session protocol](session.md#decryption).
 - The wallet processes the intent (sends transaction or signs data).
 - If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
