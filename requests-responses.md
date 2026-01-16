@@ -100,11 +100,14 @@ type Feature =
     }
   | {
       name: 'MakeSendTransactionIntent';
-      types: ('send-ton' | 'send-jetton' | 'send-nft' | 'send-action')[]; // send transaction intent types
+      types: ('send-ton' | 'send-jetton' | 'send-nft')[]; // send transaction intent types
     }
   | {
       name: 'MakeSignDataIntent';
       types: ('text' | 'binary' | 'cell')[]; // instant sign-data intent types
+    }
+  | {
+      name: 'MakeSendActionIntent';
     };
 
 type ConnectItemReply = TonAddressItemReply | TonProofItemReply ...;
@@ -567,7 +570,7 @@ Otherwise, use Binary format.
 
 #### Intents
 
-Intents are deep-link flows that allow a dApp to prepare an action and hand it over to a wallet **without requiring a prior TonConnect session**. There are two types of intents: SendTransactionIntent and SignDataIntent.
+Intents are deep-link flows that allow a dApp to prepare an action and hand it over to a wallet **without requiring a prior TonConnect session**. There are three types of intents: SendTransactionIntent, SignDataIntent, and SendActionIntent.
 
 **Base fields (common to all intents):**
 
@@ -604,10 +607,9 @@ interface MakeSendTransactionIntentRequest {
 
 Where `<transaction-intent-payload>` is a JSON object as string with:
 - `connect_request` (optional) - see [Intents](#intents) section above.
-- `type` (string, required): MUST be equal to `"transaction-intent"`.
 - `valid_until` (integer, optional): unix timestamp. After this moment the intent is invalid.
 - `network` (string, optional): target network; semantics match `sendTransaction`.
-- `items` (array, required): ordered list of intent fragments. Each item has a `type` and fields matching `send-ton` / `send-jetton` / `send-nft` / `send-action` below.
+- `items` (array, required): ordered list of intent fragments. Each item has a `type` and fields matching `send-ton` / `send-jetton` / `send-nft` below.
 
 - **TON transfer (`send-ton`)**. JSON object with the following properties:
     - **type** (string): MUST be equal to `'send-ton'`.
@@ -630,6 +632,7 @@ Where `<transaction-intent-payload>` is a JSON object as string with:
 
 - **NFT transfer (`send-nft`)**. JSON object with the following properties:
     - **type** (string): MUST be equal to `'send-nft'`.
+    - **nft_address** (string): address of the NFT item to transfer.
     - **query_id** (integer, optional): arbitrary request number.
     - **new_owner** (string): address of the new owner of the NFT item.
     - **response_destination** (string, optional): address where to send a response with confirmation of a successful transfer and the rest of the incoming message Toncoins. If omitted, user's address MUST be used.
@@ -637,15 +640,10 @@ Where `<transaction-intent-payload>` is a JSON object as string with:
     - **forward_ton_amount** (string, optional): amount of nanotons to be sent to the destination address.
     - **forward_payload** (string, optional): Base64-encoded custom data that should be sent to the destination address with notification.
 
-- **Any action (`send-action`)**. JSON object with the following properties:
-    - **type** (string): MUST be equal to `'send-action'`.
-    - **action_url** (string): action URL; MUST be called with an `address` query parameter. MUST respond with <transaction-payload> object as in [`sendTransaction`](#sign-and-send-transaction) flow.
-
 **Examples:**
 
 ```json5
 {
-  "type": "transaction-intent",
   "valid_until": 1764424242,
   "network": "-239",
   "items": [
@@ -660,7 +658,6 @@ Where `<transaction-intent-payload>` is a JSON object as string with:
 
 ```json5
 {
-  "type": "transaction-intent",
   "valid_until": 1764424242,
   "network": "-3",
   "items": [
@@ -670,10 +667,6 @@ Where `<transaction-intent-payload>` is a JSON object as string with:
       "jetton_amount": "1000000",
       "destination": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
       "forward_ton_amount": "10000000"
-    },
-    {
-      "type": "send-action",
-      "action_url": "https://example.com/dex?action=swap"
     }
   ]
 }
@@ -721,7 +714,6 @@ interface MakeSignDataIntentRequest {
 
 `<sign-data-intent-payload>` is a JSON object as string with:
 - `connect_request` (optional) - see [Intents](#intents) section above.
-- `type` (string, required): MUST be equal to `"sign-data-intent"`.
 - `network` (string, optional): target network; semantics match `signData`.
 - `manifestUrl` (string, required): tonconnect-manifest URL used for domain binding.
 - `payload` (object, required): one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents, as they are specified at the intent level.
@@ -730,7 +722,6 @@ interface MakeSignDataIntentRequest {
 
 ```json5
 {
-  "type": "sign-data-intent",
   "manifestUrl": "https://example.com/tonconnect-manifest.json",
   "network": "-239",
   "payload": {
@@ -752,14 +743,87 @@ interface MakeSignDataIntentResponseError {
     id: string;
 }
 
-interface MakeSignDataIntentResponseSuccess {
-    result: {
-        signature: string; // base64 encoded signature
-        address: string;   // wallet address in raw format
-        timestamp: number; // UNIX timestamp in seconds (UTC) at the moment on creating the signature.
-        domain: string;  // app domain name (as url part, without encoding) 
-        payload: <sign-data-payload>; // payload received from the intent
-    };
+type MakeSignDataIntentResponseSuccess = SignDataResponseSuccess;
+```
+
+**Error codes:**
+
+| code | description               |
+|------|---------------------------|
+| 0    | Unknown error             |
+| 1    | Bad request               |
+| 100  | Unknown app               |
+| 300  | User declined the request |
+| 400  | Method not supported      |
+
+##### Send Action Intent
+
+`makeSendActionIntent` lets a dApp prepare an action intent and hand it to a wallet.
+
+```tsx
+interface MakeSendActionIntentRequest {
+  id: string;
+  method: 'makeSendActionIntent';
+  params: [<action-intent-payload>];
+}
+```
+
+Where `<action-intent-payload>` is a JSON object as string with:
+- `connect_request` (optional) - see [Intents](#intents) section above.
+- `action_url` (string, required): action URL that the wallet will call to get the action details. The wallet MUST add the `address` query parameter to this URL (the user's wallet address). The action URL MUST respond with a JSON object containing `action_type` and `action` fields:
+  - `{action_type: 'sendTransaction', action: { ...sendTransaction fields as in [`sendTransaction`](#sign-and-send-transaction)}}` - for transaction actions
+  - `{action_type: 'signData', action: { ...signData fields as in [`signData`](#sign-data)}}` - for signing actions
+
+**Examples:**
+
+```json5
+{
+  "action_url": "https://example.com/dex?action=swap"
+}
+```
+
+**Action URL Response Examples:**
+
+For a sendTransaction action:
+```json5
+{
+  "action_type": "sendTransaction",
+  "action": {
+    "valid_until": 1658253458,
+    "network": "-239",
+    "messages": [
+      {
+        "address": "EQBBJBB3HagsujBqVfqeDUPJ0kXjgTPLWPFFffuNXNiJL0aA",
+        "amount": "20000000"
+      }
+    ]
+  }
+}
+```
+
+For a signData action:
+```json5
+{
+  "action_type": "signData",
+  "action": {
+    "network": "-239",
+    "type": "text",
+    "text": "Confirm swap"
+  }
+}
+```
+
+The wallet responds with **MakeSendActionIntentResponse**:
+
+```tsx
+type MakeSendActionIntentResponse =
+    | MakeSendActionIntentResponseSuccess
+    | MakeSendActionIntentResponseError;
+
+type MakeSendActionIntentResponseSuccess = SignDataResponseSuccess | SendTransactionResponseSuccess;
+
+interface MakeSendActionIntentResponseError {
+    error: { code: number; message: string };
     id: string;
 }
 ```
@@ -771,7 +835,8 @@ interface MakeSignDataIntentResponseSuccess {
 | 0    | Unknown error             |
 | 1    | Bad request               |
 | 100  | Unknown app               |
-| 300  | User declined the request |
+| 200  | Action URL unreachable    |
+| 300  | User declined the action  |
 | 400  | Method not supported      |
 
 #### Disconnect operation
