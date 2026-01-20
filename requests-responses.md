@@ -734,7 +734,7 @@ interface MakeSignDataIntentRequest {
   m: 'signIntent';
   c?: ConnectRequest; // optional - see [Intents](#intents) section above
   n?: string; // target network; semantics match `signData`.
-  mu: string; // tonconnect-manifest URL used for domain binding.
+  mu?: string; // TonConnect manifest URL for domain binding; must be provided if `c` is not present, otherwise taken from `c`
   p: SignDataPayload; // one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents, as they are specified at the intent level.
 }
 
