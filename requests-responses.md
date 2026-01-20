@@ -100,7 +100,7 @@ type Feature =
     }
   | {
       name: 'MakeSendTransactionIntent';
-      types: ('send-ton' | 'send-jetton' | 'send-nft')[]; // send transaction intent types
+      types: ('ton' | 'jetton' | 'nft')[]; // send transaction intent types
     }
   | {
       name: 'MakeSignDataIntent';
@@ -575,7 +575,7 @@ Intents are deep-link flows that allow a dApp to prepare an action and hand it o
 **Base fields (common to all intents):**
 
 All intent payloads share the following base fields:
-- `connect_request` (object, optional): a ConnectRequest object to establish/reuse connection before executing the intent. If present, the wallet SHOULD complete the connect flow first before processing the intent.
+- `c` (connect_request, object, optional): a ConnectRequest object to establish/reuse connection before executing the intent. If present, the wallet SHOULD complete the connect flow first before processing the intent.
 
 **Flow:**
 
@@ -613,50 +613,50 @@ There are two ways to pass intent data to the wallet:
 
 ##### Send Transaction Intent
 
-`makeSendTransactionIntent` lets a dApp prepare a transaction intent and hand it to a wallet.
+`txIntent` lets a dApp prepare a transaction intent and hand it to a wallet.
 
 ```tsx
 interface MakeSendTransactionIntentRequest {
   id: string;
-  method: 'makeSendTransactionIntent';
-  connect_request?: ConnectRequest; // optional - see [Intents](#intents) section above
-  valid_until?: number; // unix timestamp. After this moment the intent is invalid.
-  network?: string; // target network; semantics match `sendTransaction`.
-  items: IntentItem[]; // ordered list of intent fragments. Each item has a `type` and fields matching `send-ton` / `send-jetton` / `send-nft` below.
+  m: 'txIntent';
+  c?: ConnectRequest; // optional - see [Intents](#intents) section above
+  vu?: number; // unix timestamp. After this moment the intent is invalid.
+  n?: string; // target network; semantics match `sendTransaction`.
+  i: IntentItem[]; // ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below.
 }
 
 type IntentItem = SendTonItem | SendJettonItem | SendNftItem;
 
 interface SendTonItem {
-  type: 'send-ton';
-  address: string; // message destination in user-friendly format
-  amount: string; // number of nanocoins to send as a decimal string
-  payload?: string; // raw one-cell BoC encoded in Base64
-  state_init?: string; // raw one-cell BoC encoded in Base64
-  extra_currency?: Record<string, string>; // extra currencies to send with the message
+  t: 'ton';
+  a: string; // message destination in user-friendly format
+  am: string; // number of nanocoins to send as a decimal string
+  p?: string; // raw one-cell BoC encoded in Base64
+  si?: string; // raw one-cell BoC encoded in Base64
+  ec?: Record<string, string>; // extra currencies to send with the message
 }
 
 interface SendJettonItem {
-  type: 'send-jetton';
-  master_address: string; // jetton master contract address
-  query_id?: number; // arbitrary request number
-  jetton_amount: string; // amount of transferring jettons in elementary units
-  destination: string; // address of the new owner of the jettons
-  response_destination?: string; // address where to send a response with confirmation of a successful transfer and the rest of the incoming message Toncoins. If omitted, user's address MUST be used
-  custom_payload?: string; // raw one-cell BoC encoded in Base64 custom data (used by either sender or receiver jetton wallet for inner logic)
-  forward_ton_amount?: string; // amount of nanotons to be sent to the destination address
-  forward_payload?: string; // Base64-encoded custom data that should be sent to the destination address with notification
+  t: 'jetton';
+  ma: string; // jetton master contract address
+  qi?: number; // arbitrary request number
+  ja: string; // amount of transferring jettons in elementary units
+  d: string; // address of the new owner of the jettons
+  rd?: string; // address where to send a response with confirmation of a successful transfer and the rest of the incoming message Toncoins. If omitted, user's address MUST be used
+  cp?: string; // raw one-cell BoC encoded in Base64 custom data (used by either sender or receiver jetton wallet for inner logic)
+  fta?: string; // amount of nanotons to be sent to the destination address
+  fp?: string; // Base64-encoded custom data that should be sent to the destination address with notification
 }
 
 interface SendNftItem {
-  type: 'send-nft';
-  nft_address: string; // address of the NFT item to transfer
-  query_id?: number; // arbitrary request number
-  new_owner: string; // address of the new owner of the NFT item
-  response_destination?: string; // address where to send a response with confirmation of a successful transfer and the rest of the incoming message Toncoins. If omitted, user's address MUST be used
-  custom_payload?: string; // raw one-cell BoC encoded in Base64 custom data (used by either sender or receiver NFT wallet for inner logic)
-  forward_ton_amount?: string; // amount of nanotons to be sent to the destination address
-  forward_payload?: string; // Base64-encoded custom data that should be sent to the destination address with notification
+  t: 'nft';
+  na: string; // address of the NFT item to transfer
+  qi?: number; // arbitrary request number
+  no: string; // address of the new owner of the NFT item
+  rd?: string; // address where to send a response with confirmation of a successful transfer and the rest of the incoming message Toncoins. If omitted, user's address MUST be used
+  cp?: string; // raw one-cell BoC encoded in Base64 custom data (used by either sender or receiver NFT wallet for inner logic)
+  fta?: string; // amount of nanotons to be sent to the destination address
+  fp?: string; // Base64-encoded custom data that should be sent to the destination address with notification
 }
 ```
 
@@ -665,14 +665,14 @@ interface SendNftItem {
 ```json5
 {
   "id": "123",
-  "method": "makeSendTransactionIntent",
-  "valid_until": 1764424242,
-  "network": "-239",
-  "items": [
+  "m": "txIntent",
+  "vu": 1764424242,
+  "n": "-239",
+  "i": [
     {
-      "type": "send-ton",
-      "address": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
-      "amount": "20000000"
+      "t": "ton",
+      "a": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
+      "am": "20000000"
     }
   ]
 }
@@ -681,16 +681,16 @@ interface SendNftItem {
 ```json5
 {
   "id": "124",
-  "method": "makeSendTransactionIntent",
-  "valid_until": 1764424242,
-  "network": "-3",
-  "items": [
+  "m": "txIntent",
+  "vu": 1764424242,
+  "n": "-3",
+  "i": [
     {
-      "type": "send-jetton",
-      "master_address": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
-      "jetton_amount": "1000000",
-      "destination": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
-      "forward_ton_amount": "10000000"
+      "t": "jetton",
+      "ma": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
+      "ja": "1000000",
+      "d": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
+      "fta": "10000000"
     }
   ]
 }
@@ -726,16 +726,16 @@ interface MakeSendTransactionIntentResponseError {
 
 ##### Sign Data Intent
 
-`makeSignDataIntent` lets a dApp prepare a sign data intent and hand it to a wallet.
+`signIntent` lets a dApp prepare a sign data intent and hand it to a wallet.
 
 ```tsx
 interface MakeSignDataIntentRequest {
   id: string;
-  method: 'makeSignDataIntent';
-  connect_request?: ConnectRequest; // optional - see [Intents](#intents) section above
-  network?: string; // target network; semantics match `signData`.
-  manifestUrl: string; // tonconnect-manifest URL used for domain binding.
-  payload: SignDataPayload; // one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents, as they are specified at the intent level.
+  m: 'signIntent';
+  c?: ConnectRequest; // optional - see [Intents](#intents) section above
+  n?: string; // target network; semantics match `signData`.
+  mu: string; // tonconnect-manifest URL used for domain binding.
+  p: SignDataPayload; // one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents, as they are specified at the intent level.
 }
 
 type SignDataPayload = TextSignDataPayload | BinarySignDataPayload | CellSignDataPayload;
@@ -746,10 +746,10 @@ type SignDataPayload = TextSignDataPayload | BinarySignDataPayload | CellSignDat
 ```json5
 {
   "id": "125",
-  "method": "makeSignDataIntent",
-  "manifestUrl": "https://example.com/tonconnect-manifest.json",
-  "network": "-239",
-  "payload": {
+  "m": "signIntent",
+  "mu": "https://example.com/tonconnect-manifest.json",
+  "n": "-239",
+  "p": {
     "type": "text",
     "text": "Confirm email update to user@example.com"
   }
@@ -783,14 +783,14 @@ type MakeSignDataIntentResponseSuccess = SignDataResponseSuccess;
 
 ##### Send Action Intent
 
-`makeSendActionIntent` lets a dApp prepare an action intent and hand it to a wallet.
+`actionIntent` lets a dApp prepare an action intent and hand it to a wallet.
 
 ```tsx
 interface MakeSendActionIntentRequest {
   id: string;
-  method: 'makeSendActionIntent';
-  connect_request?: ConnectRequest; // optional - see [Intents](#intents) section above
-  action_url: string; // action URL that the wallet will call to get the action details. The wallet MUST add the `address` query parameter to this URL (the user's wallet address). The action URL MUST respond with a JSON object containing `action_type` and `action` fields:
+  m: 'actionIntent';
+  c?: ConnectRequest; // optional - see [Intents](#intents) section above
+  a: string; // action URL that the wallet will call to get the action details. The wallet MUST add the `address` query parameter to this URL (the user's wallet address). The action URL MUST respond with a JSON object containing `action_type` and `action` fields:
   // - `{action_type: 'sendTransaction', action: { ...sendTransaction fields as in [`sendTransaction`](#sign-and-send-transaction)}}` - for transaction actions
   // - `{action_type: 'signData', action: { ...signData fields as in [`signData`](#sign-data)}}` - for signing actions
 }
@@ -801,8 +801,8 @@ interface MakeSendActionIntentRequest {
 ```json5
 {
   "id": "126",
-  "method": "makeSendActionIntent",
-  "action_url": "https://example.com/dex?action=swap"
+  "m": "actionIntent",
+  "a": "https://example.com/dex?action=swap"
 }
 ```
 
