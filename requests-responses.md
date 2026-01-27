@@ -99,12 +99,19 @@ type Feature =
       types: ('text' | 'binary' | 'cell')[]; // array of supported data types for signing
     }
   | {
+      name: 'SignMessage';
+    }
+  | {
       name: 'MakeSendTransactionIntent';
       types: ('ton' | 'jetton' | 'nft')[]; // send transaction intent types
     }
   | {
       name: 'MakeSignDataIntent';
       types: ('text' | 'binary' | 'cell')[]; // instant sign-data intent types
+    }
+  | {
+      name: 'MakeSignMessageIntent';
+      types: ('ton' | 'jetton' | 'nft')[]; // sign message intent types (same as transaction intent)
     }
   | {
       name: 'MakeSendActionIntent';
@@ -235,6 +242,7 @@ The signature must be verified by public key:
 
 - sendTransaction
 - signData
+- signMessage
 - disconnect
 
 **Available events:**
@@ -568,9 +576,56 @@ If the data needs to be human-readable—but is not textual—use the **Cell** f
 
 Otherwise, use Binary format.
 
+#### Sign Message
+
+App sends **SignMessageRequest**:
+
+```tsx
+interface SignMessageRequest {
+	method: 'signMessage';
+	params: [<sign-message-payload>];
+	id: string;
+}
+```
+
+Where `<sign-message-payload>` is JSON string with the same structure as `<transaction-payload>` in [`sendTransaction`](#sign-and-send-transaction), including `valid_until`, `network`, `from`, and `messages` fields.
+
+**Wallet behaviour:**
+
+- Wallet MUST prepare the external message with the provided messages (same as in `sendTransaction`).
+- Wallet MUST show the messages details to the user for approval.
+- Wallet MUST sign the message but MUST NOT send it to the blockchain.
+- Wallet returns the signed message as a base64-encoded BoC.
+
+Wallet replies with **SignMessageResponse**:
+
+```tsx
+type SignMessageResponse = SignMessageResponseSuccess | SignMessageResponseError;
+
+interface SignMessageResponseSuccess {
+    result: string; // base64-encoded BoC of the signed message
+    id: string;
+}
+
+interface SignMessageResponseError {
+    error: { code: number; message: string };
+    id: string;
+}
+```
+
+**Error codes:**
+
+| code | description               |
+|------|---------------------------|
+| 0    | Unknown error             |
+| 1    | Bad request               |
+| 100  | Unknown app               |
+| 300  | User declined the request |
+| 400  | Method not supported      |
+
 #### Intents
 
-Intents are deep-link flows that allow a dApp to prepare an action and hand it over to a wallet **without requiring a prior TonConnect session**. There are three types of intents: SendTransactionIntent, SignDataIntent, and SendActionIntent.
+Intents are deep-link flows that allow a dApp to prepare an action and hand it over to a wallet **without requiring a prior TonConnect session**. There are four types of intents: SendTransactionIntent, SignDataIntent, SignMessageIntent, and SendActionIntent.
 
 **Base fields (common to all intents):**
 
@@ -594,7 +649,7 @@ There are two ways to pass intent data to the wallet:
     - `get_url` is the URL to get stored intent from the object_storage.
 - The wallet scans the link and retrieves the encrypted payload from the object_storage using the `get_url`.
 - The wallet decrypts the message as described in the [Session protocol](session.md#decryption).
-- The wallet processes the intent (sends transaction or signs data).
+- The wallet processes the intent (sends transaction, signs data, or signs message).
 - If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
 
 **Approach 2: URL-Embedded Data**
@@ -606,7 +661,7 @@ There are two ways to pass intent data to the wallet:
     - `id` is the app client ID (public key) encoded as hex.
     - `r` is the payload encoded as Base64Url JSON string.
 - The wallet scans the link and extracts the payload directly from the `r` parameter.
-- The wallet processes the intent (sends transaction or signs data).
+- The wallet processes the intent (sends transaction, signs data, or signs message).
 - If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
 
 **Note:** The app can choose either approach. Approach 1 (Object Storage) is recommended for larger payloads. Approach 2 (URL-Embedded) is simpler but has URL length limitations.
@@ -769,6 +824,69 @@ interface MakeSignDataIntentResponseError {
 }
 
 type MakeSignDataIntentResponseSuccess = SignDataResponseSuccess;
+```
+
+**Error codes:**
+
+| code | description               |
+|------|---------------------------|
+| 0    | Unknown error             |
+| 1    | Bad request               |
+| 100  | Unknown app               |
+| 300  | User declined the request |
+| 400  | Method not supported      |
+
+##### Sign Message Intent
+
+`signMsg` lets a dApp prepare a sign message intent and hand it to a wallet.
+
+```tsx
+interface MakeSignMessageIntentRequest {
+  id: string;
+  m: 'signMsg';
+  c?: ConnectRequest; // optional - see [Intents](#intents) section above
+  vu?: number; // valid_until - unix timestamp. After this moment the intent is invalid.
+  n?: string; // target network; semantics match `signMessage`.
+  i: IntentItem[]; // items - ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below, same as in [`Send Transaction Intent`](#send-transaction-intent).
+}
+```
+
+The structure is the same as [`Send Transaction Intent`](#send-transaction-intent), but the wallet signs the message and returns it as a base64-encoded BoC instead of sending it to the blockchain.
+
+**Examples:**
+
+```json5
+{
+  "id": "127",
+  "m": "signMsg",
+  "vu": 1764424242,
+  "n": "-239",
+  "i": [
+    {
+      "t": "ton",
+      "a": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
+      "am": "20000000"
+    }
+  ]
+}
+```
+
+The wallet responds with **MakeSignMessageIntentResponse**:
+
+```typescript
+type MakeSignMessageIntentResponse =
+    | MakeSignMessageIntentResponseSuccess
+    | MakeSignMessageIntentResponseError;
+
+interface MakeSignMessageIntentResponseError {
+    error: { code: number; message: string };
+    id: string;
+}
+
+interface MakeSignMessageIntentResponseSuccess {
+    result: string; // base64-encoded BoC of the signed message
+    id: string;
+}
 ```
 
 **Error codes:**
