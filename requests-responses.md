@@ -600,12 +600,12 @@ There are two ways to pass intent data to the wallet:
 **Approach 2: URL-Embedded Data**
 
 - The app constructs the intent payload.
-- The app encodes the payload as `urlsafe(json.stringify(payload))` (same encoding as used for ConnectRequest in [Universal link](bridge.md#universal-link)) and embeds it directly in the deep link URL.
+- The app encodes the payload as `base64url(json.stringify(payload))` and embeds it directly in the deep link URL.
 - To hand off the request it generates a TonConnect deep link of the form  
-  `tc://intent_inline?id=<client_pub_key>&data=<urlsafe(json.stringify(payload))>`, where:
+  `tc://intent_inline?id=<client_pub_key>&r=<base64url(json.stringify(payload))>`, where:
     - `id` is the app client ID (public key) encoded as hex.
-    - `data` is the payload encoded as URL-safe JSON string (same as `r` parameter in connect requests).
-- The wallet scans the link and extracts the payload directly from the `data` parameter.
+    - `r` is the payload encoded as Base64Url JSON string.
+- The wallet scans the link and extracts the payload directly from the `r` parameter.
 - The wallet processes the intent (sends transaction or signs data).
 - If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
 
