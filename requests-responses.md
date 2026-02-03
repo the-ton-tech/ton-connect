@@ -644,7 +644,7 @@ There are two ways to pass intent data to the wallet:
 - The app receives a `get_url` - URL to get stored intent from the object_storage.
 - To hand off the request it generates a TonConnect deep link of the form  
   `tc://intent?id=<client_pub_key>&pk=<wallet_pk>&get_url=<get_url>`, where:
-    - `id` is the app client ID (public key) encoded as hex.
+    - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
     - `pk` is the wallet private key encoded as hex.
     - `get_url` is the URL to get stored intent from the object_storage.
 - The wallet scans the link and retrieves the encrypted payload from the object_storage using the `get_url`.
@@ -658,7 +658,7 @@ There are two ways to pass intent data to the wallet:
 - The app encodes the payload as `base64url(json.stringify(payload))` and embeds it directly in the deep link URL.
 - To hand off the request it generates a TonConnect deep link of the form  
   `tc://intent_inline?id=<client_pub_key>&r=<base64url(json.stringify(payload))>`, where:
-    - `id` is the app client ID (public key) encoded as hex.
+    - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
     - `r` is the payload encoded as Base64Url JSON string.
 - The wallet scans the link and extracts the payload directly from the `r` parameter.
 - The wallet processes the intent (sends transaction, signs data, or signs message).
