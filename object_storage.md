@@ -6,48 +6,41 @@ Object Storage is a service used to temporarily store objects. It allows clients
 
 ## HTTP Object Storage
 
+### Store
+
 Client uploads an object to the object storage.
 
 ```tsx
 request
-    POST /store?ttl=<ttl_in_seconds>
-```
+    POST /objects?ttl=<ttl_in_seconds>
 
-Body:
-```json
-{
-  "object": "base64_encoded_object"
-}
+    body: <object>
 ```
 
 **ttl** – Time-to-live in seconds. The object will be automatically removed after this duration. Object Storage services should support at least 300 seconds TTL.
 
 If the TTL exceeds the hard limit of the storage server, it should respond with HTTP 400.
 
-When the object storage receives a `base64_encoded_object`, it stores it and generates a response `StorageResponse`:
+Response:
 
 ```json
 {
-  "get_url": "<url_to_retrieve_stored_object>"
+  "get_url": "<base_url>/objects/<hash>"
 }
 ```
 
-The `get_url` is a unique URL that can be used to retrieve the stored object.
+The `get_url` MUST follow the format `/objects/:hash`, where `:hash` is the SHA256 hash of the stored object (hex-encoded).
+
+### Retrieve
 
 Client retrieves the stored object using the `get_url`.
 
 ```tsx
 request
-    GET <get_url>
+    GET /objects/:hash
 ```
 
-The object storage responds with the stored object:
-
-```js
-{
-  "object": <base64_encoded_object>
-}
-```
+Response: the stored object.
 
 Object Storage removes the object when the TTL expires.
 
