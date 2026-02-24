@@ -2,6 +2,7 @@
 
 Object Storage is a service used to temporarily store objects. It allows clients to store data and retrieve it later using a unique URL.
 
+* **Object Storage is maintained by the wallet provider**. App developers do not have to choose or build an **Object Storage**. Each wallet’s **Object Storage** is listed in the [wallets-list](https://github.com/ton-blockchain/wallets-list) config.
 * **Stored objects have TTL (Time-To-Live).** Objects are automatically removed after the TTL expires.
 
 ## HTTP Object Storage

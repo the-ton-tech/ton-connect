@@ -630,7 +630,7 @@ Intents are deep-link flows that allow a dApp to prepare an action and hand it o
 **Base fields (common to all intents):**
 
 All intent payloads share the following base fields:
-- `c` (connect_request, object, optional): a ConnectRequest object to establish/reuse connection before executing the intent. If present, the wallet SHOULD complete the connect flow first before processing the intent.
+- `c` (connect_request, object, optional): a ConnectRequest object to establish/reuse connection. If present, the wallet SHOULD complete the connect flow after processing the intent.
 
 **Flow:**
 
@@ -638,17 +638,19 @@ There are two ways to pass intent data to the wallet:
 
 **Approach 1: Object Storage**
 
-- The app generates its session key pair and the wallet's key pair.
-- The app constructs the intent payload and encrypts it with the wallet public key as described in the [Session protocol](session.md#encryption).
+- The app generates its session key pair and a key pair used only to encrypt and decrypt the intent payload stored on the object_storage.
+- The app constructs the intent payload and encrypts it with the public key of that pair as described in the [Session protocol](session.md#encryption).
 - The app uploads the encrypted payload to the object_storage with TTL.
-- The app receives a `get_url` - URL to get stored intent from the object_storage.
+- The app receives a `get_url` - URL to get the stored intent from the object_storage.
 - To hand off the request it generates a TonConnect deep link of the form  
-  `tc://intent?id=<client_pub_key>&pk=<wallet_pk>&get_url=<get_url>`, where:
+  `tc://intent?v=2&id=<client_pub_key>&pk=<priv_key>&get_url=<get_url_encoded>&ret=back`, where:
+    - `v` is the protocol version (e.g. 2).
     - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
-    - `pk` is the wallet private key encoded as hex.
-    - `get_url` is the URL to get stored intent from the object_storage.
+    - `pk` is the private key of the encryption key pair (used to encrypt/decrypt the payload on the object_storage), encoded as hex.
+    - `get_url` is the uri-encoded URL to get the stored intent from the object_storage.
+    - `ret` (optional) specifies return strategy when the user completes or declines; semantics match the [Universal link](bridge.md#universal-link) `ret` parameter.
 - The wallet scans the link and retrieves the encrypted payload from the object_storage using the `get_url`.
-- The wallet decrypts the message as described in the [Session protocol](session.md#decryption).
+- The wallet decrypts the payload (stored on the object_storage) using the private key `pk` as described in the [Session protocol](session.md#decryption).
 - The wallet processes the intent (sends transaction, signs data, or signs message).
 - If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
 
@@ -657,9 +659,11 @@ There are two ways to pass intent data to the wallet:
 - The app constructs the intent payload.
 - The app encodes the payload as `base64url(json.stringify(payload))` and embeds it directly in the deep link URL.
 - To hand off the request it generates a TonConnect deep link of the form  
-  `tc://intent_inline?id=<client_pub_key>&r=<base64url(json.stringify(payload))>`, where:
+  `tc://intent_inline?v=2&id=<client_pub_key>&r=<base64url(json.stringify(payload))>&ret=back`, where:
+    - `v` (optional) is the protocol version (e.g. 2). Unsupported versions are not accepted by the wallet.
     - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
     - `r` is the payload encoded as Base64Url JSON string.
+    - `ret` (optional) specifies return strategy when the user completes or declines; semantics match the [Universal link](bridge.md#universal-link) `ret` parameter.
 - The wallet scans the link and extracts the payload directly from the `r` parameter.
 - The wallet processes the intent (sends transaction, signs data, or signs message).
 - If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
