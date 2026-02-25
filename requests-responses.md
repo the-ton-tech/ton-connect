@@ -603,7 +603,9 @@ Wallet replies with **SignMessageResponse**:
 type SignMessageResponse = SignMessageResponseSuccess | SignMessageResponseError;
 
 interface SignMessageResponseSuccess {
-    result: string; // base64-encoded BoC of the signed message
+    result: { 
+        internal_boc: string;  // base64-encoded BoC of the signed internal message
+    };
     id: string;
 }
 
@@ -890,7 +892,9 @@ interface MakeSignMessageIntentResponseError {
 }
 
 interface MakeSignMessageIntentResponseSuccess {
-    result: string; // base64-encoded BoC of the signed message
+    result: {
+        internal_boc: string;  // base64-encoded BoC of the signed internal message
+    };
     id: string;
 }
 ```
@@ -968,7 +972,7 @@ type MakeSendActionIntentResponse =
     | MakeSendActionIntentResponseSuccess
     | MakeSendActionIntentResponseError;
 
-type MakeSendActionIntentResponseSuccess = SignDataResponseSuccess | SendTransactionResponseSuccess;
+type MakeSendActionIntentResponseSuccess = MakeSignDataResponseSuccess | MakeSendTransactionIntentResponseSuccess | MakeSignMessageIntentResponseSuccess;
 
 interface MakeSendActionIntentResponseError {
     error: { code: number; message: string };
