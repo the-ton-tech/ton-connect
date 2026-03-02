@@ -683,6 +683,7 @@ interface MakeSendTransactionIntentRequest {
   c?: ConnectRequest; // optional - see [Intents](#intents) section above
   vu?: number; // unix timestamp. After this moment the intent is invalid.
   n?: string; // target network; semantics match `sendTransaction`.
+  f?: string; // sender address in raw format; semantics match `sendTransaction`.
   i: IntentItem[]; // ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below.
 }
 
@@ -731,6 +732,7 @@ interface SendNftItem {
   "m": "txIntent",
   "vu": 1764424242,
   "n": "-239",
+  "f": "0:348bcf827469c5fc38541c77fdd91d4e347eac200f6f2d9fd62dc08885f0415f",
   "i": [
     {
       "t": "ton",
@@ -797,6 +799,7 @@ interface MakeSignDataIntentRequest {
   m: 'signIntent';
   c?: ConnectRequest; // optional - see [Intents](#intents) section above
   n?: string; // target network; semantics match `signData`.
+  f?: string; // signer address in raw format; semantics match `signData`.
   mu: string; // tonconnect-manifest URL used for domain binding.
   p: SignDataPayload; // one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents, as they are specified at the intent level.
 }
@@ -812,6 +815,7 @@ type SignDataPayload = TextSignDataPayload | BinarySignDataPayload | CellSignDat
   "m": "signIntent",
   "mu": "https://example.com/tonconnect-manifest.json",
   "n": "-239",
+  "f": "0:348bcf827469c5fc38541c77fdd91d4e347eac200f6f2d9fd62dc08885f0415f",
   "p": {
     "type": "text",
     "text": "Confirm email update to user@example.com"
@@ -855,6 +859,7 @@ interface MakeSignMessageIntentRequest {
   c?: ConnectRequest; // optional - see [Intents](#intents) section above
   vu?: number; // valid_until - unix timestamp. After this moment the intent is invalid.
   n?: string; // target network; semantics match `signMessage`.
+  f?: string; // signer address in raw format; semantics match `signMessage`.
   i: IntentItem[]; // items - ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below, same as in [`Send Transaction Intent`](#send-transaction-intent).
 }
 ```
@@ -869,6 +874,7 @@ The structure is the same as [`Send Transaction Intent`](#send-transaction-inten
   "m": "signMsg",
   "vu": 1764424242,
   "n": "-239",
+  "f": "0:348bcf827469c5fc38541c77fdd91d4e347eac200f6f2d9fd62dc08885f0415f",
   "i": [
     {
       "t": "ton",
