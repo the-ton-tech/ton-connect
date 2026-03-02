@@ -683,7 +683,7 @@ interface MakeSendTransactionIntentRequest {
   c?: ConnectRequest; // optional - see [Intents](#intents) section above
   vu?: number; // unix timestamp. After this moment the intent is invalid.
   n?: string; // target network; semantics match `sendTransaction`.
-  f?: string; // sender address in raw format; semantics match `sendTransaction`.
+  f?: string; // sender address in <wc>:<hex> format; semantics match `sendTransaction`.
   i: IntentItem[]; // ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below.
 }
 
@@ -801,7 +801,7 @@ interface MakeSignDataIntentRequest {
   n?: string; // target network; semantics match `signData`.
   f?: string; // signer address in raw format; semantics match `signData`.
   mu: string; // tonconnect-manifest URL used for domain binding.
-  p: SignDataPayload; // one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents, as they are specified at the intent level.
+  p: SignDataPayload; // one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents; use intent-level `n` and `f` instead.
 }
 
 type SignDataPayload = TextSignDataPayload | BinarySignDataPayload | CellSignDataPayload;
@@ -859,7 +859,7 @@ interface MakeSignMessageIntentRequest {
   c?: ConnectRequest; // optional - see [Intents](#intents) section above
   vu?: number; // valid_until - unix timestamp. After this moment the intent is invalid.
   n?: string; // target network; semantics match `signMessage`.
-  f?: string; // signer address in raw format; semantics match `signMessage`.
+  f?: string; // sender address in <wc>:<hex> format; semantics match `signMessage`.
   i: IntentItem[]; // items - ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below, same as in [`Send Transaction Intent`](#send-transaction-intent).
 }
 ```
