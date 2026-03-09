@@ -102,19 +102,19 @@ type Feature =
       name: 'SignMessage';
     }
   | {
-      name: 'MakeSendTransactionIntent';
-      types: ('ton' | 'jetton' | 'nft')[]; // send transaction intent types
+      name: 'SendTransactionDraft';
+      types: ('ton' | 'jetton' | 'nft')[];
     }
   | {
-      name: 'MakeSignDataIntent';
-      types: ('text' | 'binary' | 'cell')[]; // instant sign-data intent types
+      name: 'SignMessageDraft';
+      types: ('ton' | 'jetton' | 'nft')[];
     }
   | {
-      name: 'MakeSignMessageIntent';
-      types: ('ton' | 'jetton' | 'nft')[]; // sign message intent types (same as transaction intent)
+      name: 'ActionDraft';
     }
   | {
-      name: 'MakeSendActionIntent';
+      name: 'Intents';
+      types: ('txDraft' | 'signMsgDraft' | 'actionDraft' | 'signData')[]; // requests supported via intent URL
     };
 
 type ConnectItemReply = TonAddressItemReply | TonProofItemReply ...;
@@ -625,70 +625,30 @@ interface SignMessageResponseError {
 | 300  | User declined the request |
 | 400  | Method not supported      |
 
-#### Intents
+#### Drafts
 
-Intents are deep-link flows that allow a dApp to prepare an action and hand it over to a wallet **without requiring a prior TonConnect session**. There are four types of intents: SendTransactionIntent, SignDataIntent, SignMessageIntent, and SendActionIntent.
+A **draft** is a payload that describes a blueprint for an action (transaction, sign message, or action). Drafts can be delivered via the [Intent](#intents) URL or via the bridge in an existing session. The following draft types are used when opening an intent link.
 
-**Base fields (common to all intents):**
+##### Send Transaction Draft
 
-All intent payloads share the following base fields:
-- `c` (connect_request, object, optional): a ConnectRequest object to establish/reuse connection. If present, the wallet SHOULD complete the connect flow after processing the intent.
-
-**Flow:**
-
-There are two ways to pass intent data to the wallet:
-
-**Approach 1: Object Storage**
-
-- The app generates its session key pair and a key pair used only to encrypt and decrypt the intent payload stored on the object_storage.
-- The app constructs the intent payload and encrypts it with the public key of that pair as described in the [Session protocol](session.md#encryption).
-- The app uploads the encrypted payload to the object_storage with TTL.
-- The app receives a `get_url` - URL to get the stored intent from the object_storage.
-- To hand off the request it generates a TonConnect deep link of the form  
-  `tc://?m=intent&v=2&id=<client_pub_key>&pk=<priv_key>&get_url=<get_url_encoded>&ret=back`, where:
-    - `m` is the intent delivery method: `intent` for object storage.
-    - `v` is the protocol version (e.g. 2).
-    - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
-    - `pk` is the private key of the encryption key pair (used to encrypt/decrypt the payload on the object_storage), encoded as hex.
-    - `get_url` is the URL-encoded URL to get the stored intent from the object_storage.
-    - `ret` (optional) specifies return strategy when the user completes or declines; semantics match the [Universal link](bridge.md#universal-link) `ret` parameter.
-- The wallet scans the link and retrieves the encrypted payload from the object_storage using the `get_url`.
-- The wallet decrypts the payload (stored on the object_storage) using the private key `pk` as described in the [Session protocol](session.md#decryption).
-- The wallet processes the intent (sends transaction, signs data, or signs message).
-- If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
-
-**Approach 2: URL-Embedded Data**
-
-- The app constructs the intent payload.
-- The app encodes the payload as `base64url(json.stringify(payload))` and embeds it directly in the deep link URL.
-- To hand off the request it generates a TonConnect deep link of the form  
-  `tc://?m=intent_inline&v=2&id=<client_pub_key>&r=<base64url(json.stringify(payload))>&ret=back`, where:
-    - `m` is the intent delivery method: `intent_inline` for URL-embedded data.
-    - `v` (optional) is the protocol version (e.g. 2). Unsupported versions are not accepted by the wallet.
-    - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
-    - `r` is the payload encoded as Base64Url JSON string.
-    - `ret` (optional) specifies return strategy when the user completes or declines; semantics match the [Universal link](bridge.md#universal-link) `ret` parameter.
-- The wallet scans the link and extracts the payload directly from the `r` parameter.
-- The wallet processes the intent (sends transaction, signs data, or signs message).
-- If `connect_request` is present, the wallet SHOULD complete the connect flow after processing the intent.
-
-**Note:** The app can choose either approach. Approach 1 (Object Storage) is recommended for larger payloads. Approach 2 (URL-Embedded) is simpler but has URL length limitations.
-
-##### Send Transaction Intent
-
-`txIntent` lets a dApp prepare a transaction intent and hand it to a wallet.
+App sends **SendTransactionDraftRequest** (or the same structure is used when delivering a draft via [Intent](#intents) URL):
 
 ```tsx
-interface MakeSendTransactionIntentRequest {
+interface SendTransactionDraftRequest {
   id: string;
-  m: 'txIntent';
-  c?: ConnectRequest; // optional - see [Intents](#intents) section above
-  vu?: number; // unix timestamp. After this moment the intent is invalid.
-  n?: string; // target network; semantics match `sendTransaction`.
-  i: IntentItem[]; // ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below.
+  method: 'txDraft';
+  params: [<transaction-draft-payload>]; // JSON string
 }
+```
 
-type IntentItem = SendTonItem | SendJettonItem | SendNftItem;
+Where `<transaction-draft-payload>` is a JSON string of an object with:
+* `vu` (number, optional): unix timestamp. After this moment the draft is invalid.
+* 'f': (string, optional): sender address in <wc>:<hex> format; semantics match `sendTransaction`.
+* `n` (string, optional): target network; semantics match `sendTransaction`.
+* `i` (array, required): ordered list of items. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below.
+
+```tsx
+type TransactionDraftItem = SendTonItem | SendJettonItem | SendNftItem;
 
 interface SendTonItem {
   t: 'ton';
@@ -727,53 +687,37 @@ interface SendNftItem {
 
 **Examples:**
 
+Request (params[0] is JSON string of the payload object):
+
 ```json5
 {
   "id": "123",
-  "m": "txIntent",
-  "vu": 1764424242,
-  "n": "-239",
-  "i": [
-    {
-      "t": "ton",
-      "a": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
-      "am": "20000000"
-    }
-  ]
+  "method": "txDraft",
+  "params": ["{\"vu\":1764424242,\"n\":\"-239\",\"i\":[{\"t\":\"ton\",\"a\":\"UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ\",\"am\":\"20000000\"}]}"]
 }
 ```
 
 ```json5
 {
   "id": "124",
-  "m": "txIntent",
-  "vu": 1764424242,
-  "n": "-3",
-  "i": [
-    {
-      "t": "jetton",
-      "ma": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
-      "ja": "1000000",
-      "d": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
-      "fta": "10000000"
-    }
-  ]
+  "method": "txDraft",
+  "params": ["{\"vu\":1764424242,\"n\":\"-3\",\"i\":[{\"t\":\"jetton\",\"ma\":\"EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs\",\"ja\":\"1000000\",\"d\":\"UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ\",\"fta\":\"10000000\"}]}"]
 }
 ```
 
-The wallet responds with **MakeSendTransactionIntentResponse**:
+The wallet responds with **SendTransactionDraftResponse** (same shape as sendTransaction result):
 
 ```tsx
-type MakeSendTransactionIntentResponse =
-    | MakeSendTransactionIntentResponseSuccess
-    | MakeSendTransactionIntentResponseError;
+type SendTransactionDraftResponse =
+    | SendTransactionDraftResponseSuccess
+    | SendTransactionDraftResponseError;
 
-interface MakeSendTransactionIntentResponseSuccess {
+interface SendTransactionDraftResponseSuccess {
     result: string; // Message BoC
     id: string;
 }
 
-interface MakeSendTransactionIntentResponseError {
+interface SendTransactionDraftResponseError {
     error: { code: number; message: string };
     id: string;
 }
@@ -789,111 +733,43 @@ interface MakeSendTransactionIntentResponseError {
 | 300  | User declined the transaction |
 | 400  | Method not supported          |
 
-##### Sign Data Intent
+##### Sign Message Draft
 
-`signIntent` lets a dApp prepare a sign data intent and hand it to a wallet.
-
-```tsx
-interface MakeSignDataIntentRequest {
-  id: string;
-  m: 'signIntent';
-  c?: ConnectRequest; // optional - see [Intents](#intents) section above
-  n?: string; // target network; semantics match `signData`.
-  mu: string; // tonconnect-manifest URL used for domain binding.
-  p: SignDataPayload; // one of the payload types as described in [Sign Data](#sign-data) section (Text, Binary, or Cell). Note that `network` and `from` fields from the payload types are ignored in intents, as they are specified at the intent level.
-}
-
-type SignDataPayload = TextSignDataPayload | BinarySignDataPayload | CellSignDataPayload;
-```
-
-**Examples:**
-
-```json5
-{
-  "id": "125",
-  "m": "signIntent",
-  "mu": "https://example.com/tonconnect-manifest.json",
-  "n": "-239",
-  "p": {
-    "type": "text",
-    "text": "Confirm email update to user@example.com"
-  }
-}
-```
-
-The wallet responds with **MakeSignDataIntentResponse**:
-
-```typescript
-type MakeSignDataIntentResponse =
-    | MakeSignDataIntentResponseSuccess
-    | MakeSignDataIntentResponseError;
-
-interface MakeSignDataIntentResponseError {
-    error: { code: number; message: string };
-    id: string;
-}
-
-type MakeSignDataIntentResponseSuccess = SignDataResponseSuccess;
-```
-
-**Error codes:**
-
-| code | description               |
-|------|---------------------------|
-| 0    | Unknown error             |
-| 1    | Bad request               |
-| 100  | Unknown app               |
-| 300  | User declined the request |
-| 400  | Method not supported      |
-
-##### Sign Message Intent
-
-`signMsg` lets a dApp prepare a sign message intent and hand it to a wallet.
+App sends **SignMessageDraftRequest** (or the same structure is used when delivering a draft via [Intent](#intents) URL):
 
 ```tsx
-interface MakeSignMessageIntentRequest {
+interface SignMessageDraftRequest {
   id: string;
-  m: 'signMsg';
-  c?: ConnectRequest; // optional - see [Intents](#intents) section above
-  vu?: number; // valid_until - unix timestamp. After this moment the intent is invalid.
-  n?: string; // target network; semantics match `signMessage`.
-  i: IntentItem[]; // items - ordered list of intent fragments. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below, same as in [`Send Transaction Intent`](#send-transaction-intent).
+  method: 'signMsgDraft';
+  params: [<sign-message-draft-payload>]; // JSON string
 }
 ```
 
-The structure is the same as [`Send Transaction Intent`](#send-transaction-intent), but the wallet signs the message and returns it as a base64-encoded BoC instead of sending it to the blockchain.
+Where `<sign-message-draft-payload>` is a JSON string of an object with the same structure as the transaction draft payload (`vu`, `f`, `n`, `i` — see [Send Transaction Draft](#send-transaction-draft)). The wallet signs the message and returns it as a base64-encoded BoC instead of sending it to the blockchain.
 
 **Examples:**
 
 ```json5
 {
   "id": "127",
-  "m": "signMsg",
-  "vu": 1764424242,
-  "n": "-239",
-  "i": [
-    {
-      "t": "ton",
-      "a": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
-      "am": "20000000"
-    }
-  ]
+  "method": "signMsgDraft",
+  "params": ["{\"vu\":1764424242,\"n\":\"-239\",\"i\":[{\"t\":\"ton\",\"a\":\"UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ\",\"am\":\"20000000\"}]}"]
 }
 ```
 
-The wallet responds with **MakeSignMessageIntentResponse**:
+The wallet responds with **SignMessageDraftResponse**:
 
 ```typescript
-type MakeSignMessageIntentResponse =
-    | MakeSignMessageIntentResponseSuccess
-    | MakeSignMessageIntentResponseError;
+type SignMessageDraftResponse =
+    | SignMessageDraftResponseSuccess
+    | SignMessageDraftResponseError;
 
-interface MakeSignMessageIntentResponseError {
+interface SignMessageDraftResponseError {
     error: { code: number; message: string };
     id: string;
 }
 
-interface MakeSignMessageIntentResponseSuccess {
+interface SignMessageDraftResponseSuccess {
     result: {
         internal_boc: string;  // base64-encoded BoC of the signed internal message
     };
@@ -911,28 +787,29 @@ interface MakeSignMessageIntentResponseSuccess {
 | 300  | User declined the request |
 | 400  | Method not supported      |
 
-##### Send Action Intent
+##### Action Draft
 
-`actionIntent` lets a dApp prepare an action intent and hand it to a wallet.
+App sends **ActionDraftRequest** (or the same structure is used when delivering a draft via [Intent](#intents) URL):
 
 ```tsx
-interface MakeSendActionIntentRequest {
+interface ActionDraftRequest {
   id: string;
-  m: 'actionIntent';
-  c?: ConnectRequest; // optional - see [Intents](#intents) section above
-  a: string; // action URL that the wallet will call to get the action details. The wallet MUST add the `address` query parameter to this URL (the user's wallet address). The action URL MUST respond with a JSON object containing `action_type` and `action` fields:
-  // - `{action_type: 'sendTransaction', action: { ...sendTransaction fields as in [`sendTransaction`](#sign-and-send-transaction)}}` - for transaction actions
-  // - `{action_type: 'signData', action: { ...signData fields as in [`signData`](#sign-data)}}` - for signing actions
+  method: 'actionDraft';
+  params: [<action-draft-payload>]; // JSON string
 }
 ```
+
+Where `<action-draft-payload>` is a JSON string of an object with:
+
+* `url` (string, required): action URL. The wallet MUST add the `address` query parameter. The action URL MUST respond with a JSON object containing `action_type` and `action` fields — see Action URL Response Examples below.
 
 **Examples:**
 
 ```json5
 {
   "id": "126",
-  "m": "actionIntent",
-  "a": "https://example.com/dex?action=swap"
+  "method": "actionDraft",
+  "params": ["{\"url\":\"https://example.com/dex?action=swap\"}"]
 }
 ```
 
@@ -967,16 +844,16 @@ For a signData action:
 }
 ```
 
-The wallet responds with **MakeSendActionIntentResponse**:
+The wallet responds with **ActionDraftResponse**:
 
 ```tsx
-type MakeSendActionIntentResponse =
-    | MakeSendActionIntentResponseSuccess
-    | MakeSendActionIntentResponseError;
+type ActionDraftResponse =
+    | ActionDraftResponseSuccess
+    | ActionDraftResponseError;
 
-type MakeSendActionIntentResponseSuccess = MakeSignDataResponseSuccess | MakeSendTransactionIntentResponseSuccess | MakeSignMessageIntentResponseSuccess;
+type ActionDraftResponseSuccess = SignDataResponseSuccess | SendTransactionResponseSuccess | SignDataResponseSuccess;
 
-interface MakeSendActionIntentResponseError {
+interface ActionDraftResponseError {
     error: { code: number; message: string };
     id: string;
 }
@@ -992,6 +869,40 @@ interface MakeSendActionIntentResponseError {
 | 200  | Action URL unreachable    |
 | 300  | User declined the action  |
 | 400  | Method not supported      |
+
+#### Intents
+
+Intents are deep-link flows that allow a dApp to prepare an action and hand it over to a wallet **without requiring a prior TonConnect session**. There are four types of intents: SendTransactionIntent, SignDataIntent, SignMessageIntent, and SendActionIntent. No fields are shared across intent types; each intent carries only the params for its method (draft or sign data).
+
+**Intent link format**
+
+The URL is built the same as for [connect](bridge.md#universal-link): common params `v`, `id` (optional), `r` (optional ConnectRequest), `ret`, plus intent-specific params.
+
+- **m**: Intent delivery mode.
+  - **m=intent**: Method payload is in the URL. Use **mp** (method payload) — draft or sign data encoded as `base64url(json.stringify(payload))`.
+  - **m=intent_remote**: Method payload is fetched from object storage. Use **get_url** and **pk** (same as object storage approach below).
+
+**Flow:**
+
+**When m=intent (URL-embedded payload)**
+
+- The app constructs the intent payload (draft or sign data).
+- The app encodes it as `base64url(json.stringify(payload))` and sets **mp** in the link.
+- Deep link form: `tc://?m=intent&v=2&id=<client_pub_key>&r=<urlsafe(ConnectRequest)>&mp=<base64url(payload)>&ret=back`.
+- The wallet extracts the payload from **mp** and processes the intent (sends transaction, signs data, signs message, or action). If **r** is present, the wallet SHOULD complete the connect flow before processing the intent.
+
+**When m=intent_remote (object storage)**
+
+- The app generates its session key pair and a key pair used only to encrypt and decrypt the intent payload stored on the object_storage.
+- The app constructs the intent payload and encrypts it with the public key of that pair as described in the [Session protocol](session.md#encryption).
+- The app uploads the encrypted payload to the object_storage with TTL.
+- The app receives a `get_url` — URL to get the stored intent from the object_storage.
+- Deep link form: `tc://?m=intent_remote&v=2&id=<client_pub_key>&r=<urlsafe(ConnectRequest)>&get_url=<get_url_encoded>&pk=<priv_key>&ret=back`, where:
+  - **get_url** is the URL-encoded URL to get the stored intent from the object_storage.
+  - **pk** is the private key of the encryption key pair (used to encrypt/decrypt the payload on the object_storage), encoded as hex.
+- The wallet retrieves the encrypted payload from the object_storage using **get_url**, decrypts it using **pk** as in the [Session protocol](session.md#decryption), then processes the intent (sends transaction, signs data, signs message, or action). If **r** is present, the wallet SHOULD complete the connect flow before processing the intent.
+
+**Note:** The app can choose either approach. Approach 1 (Object Storage) is recommended for larger payloads. Approach 2 (URL-Embedded) is simpler but has URL length limitations.
 
 #### Disconnect operation
 When user disconnects the wallet in the dApp, dApp should inform the wallet to help the wallet save resources and delete unnecessary session.

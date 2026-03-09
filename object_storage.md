@@ -15,6 +15,7 @@ Client uploads an object to the object storage.
 request
     POST /objects?ttl=<ttl_in_seconds>
 
+    Content-Type: <content_type>
     body: <object>
 ```
 
@@ -31,6 +32,8 @@ Response:
 ```
 
 The `get_url` MUST follow the format `/objects/:hash`, where `:hash` is the SHA256 hash of the stored object (hex-encoded).
+
+**Hash calculation:** `hash = SHA256(byte(content) + byte(content_type))`, where `content` is the raw object bytes and `content_type` is the value of the `Content-Type` header. The hash is hex-encoded in the URL path.
 
 ### Retrieve
 
