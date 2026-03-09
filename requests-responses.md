@@ -645,11 +645,12 @@ There are two ways to pass intent data to the wallet:
 - The app uploads the encrypted payload to the object_storage with TTL.
 - The app receives a `get_url` - URL to get the stored intent from the object_storage.
 - To hand off the request it generates a TonConnect deep link of the form  
-  `tc://intent?v=2&id=<client_pub_key>&pk=<priv_key>&get_url=<get_url_encoded>&ret=back`, where:
+  `tc://?m=intent&v=2&id=<client_pub_key>&pk=<priv_key>&get_url=<get_url_encoded>&ret=back`, where:
+    - `m` is the intent delivery method: `intent` for object storage.
     - `v` is the protocol version (e.g. 2).
     - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
     - `pk` is the private key of the encryption key pair (used to encrypt/decrypt the payload on the object_storage), encoded as hex.
-    - `get_url` is the uri-encoded URL to get the stored intent from the object_storage.
+    - `get_url` is the URL-encoded URL to get the stored intent from the object_storage.
     - `ret` (optional) specifies return strategy when the user completes or declines; semantics match the [Universal link](bridge.md#universal-link) `ret` parameter.
 - The wallet scans the link and retrieves the encrypted payload from the object_storage using the `get_url`.
 - The wallet decrypts the payload (stored on the object_storage) using the private key `pk` as described in the [Session protocol](session.md#decryption).
@@ -661,7 +662,8 @@ There are two ways to pass intent data to the wallet:
 - The app constructs the intent payload.
 - The app encodes the payload as `base64url(json.stringify(payload))` and embeds it directly in the deep link URL.
 - To hand off the request it generates a TonConnect deep link of the form  
-  `tc://intent_inline?v=2&id=<client_pub_key>&r=<base64url(json.stringify(payload))>&ret=back`, where:
+  `tc://?m=intent_inline&v=2&id=<client_pub_key>&r=<base64url(json.stringify(payload))>&ret=back`, where:
+    - `m` is the intent delivery method: `intent_inline` for URL-embedded data.
     - `v` (optional) is the protocol version (e.g. 2). Unsupported versions are not accepted by the wallet.
     - `id` (optional) is the app client ID (public key) encoded as hex. SHOULD be included only when the dApp expects a response from the wallet.
     - `r` is the payload encoded as Base64Url JSON string.
