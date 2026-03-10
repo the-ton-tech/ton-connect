@@ -637,13 +637,18 @@ App sends **SendTransactionDraftRequest** (or the same structure is used when de
 interface SendTransactionDraftRequest {
   id: string;
   method: 'txDraft';
-  params: [<transaction-draft-payload>]; // JSON string
+  params: {
+    vu?: number;
+    f?: string;
+    n?: string;
+    i: TransactionDraftItem[];
+  };
 }
 ```
 
-Where `<transaction-draft-payload>` is a JSON string of an object with:
+Where `params` is an object with:
 * `vu` (number, optional): unix timestamp. After this moment the draft is invalid.
-* 'f': (string, optional): sender address in <wc>:<hex> format; semantics match `sendTransaction`.
+* `f`: (string, optional): sender address in <wc>:<hex> format; semantics match `sendTransaction`.
 * `n` (string, optional): target network; semantics match `sendTransaction`.
 * `i` (array, required): ordered list of items. Each item has a `t` and fields matching `ton` / `jetton` / `nft` below.
 
@@ -687,13 +692,23 @@ interface SendNftItem {
 
 **Examples:**
 
-Request (params[0] is JSON string of the payload object):
+Request:
 
 ```json5
 {
   "id": "123",
   "method": "txDraft",
-  "params": ["{\"vu\":1764424242,\"n\":\"-239\",\"i\":[{\"t\":\"ton\",\"a\":\"UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ\",\"am\":\"20000000\"}]}"]
+  "params": {
+    "vu": 1764424242,
+    "n": "-239",
+    "i": [
+      {
+        "t": "ton",
+        "a": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
+        "am": "20000000"
+      }
+    ]
+  }
 }
 ```
 
@@ -701,7 +716,19 @@ Request (params[0] is JSON string of the payload object):
 {
   "id": "124",
   "method": "txDraft",
-  "params": ["{\"vu\":1764424242,\"n\":\"-3\",\"i\":[{\"t\":\"jetton\",\"ma\":\"EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs\",\"ja\":\"1000000\",\"d\":\"UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ\",\"fta\":\"10000000\"}]}"]
+  "params": {
+    "vu": 1764424242,
+    "n": "-3",
+    "i": [
+      {
+        "t": "jetton",
+        "ma": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
+        "ja": "1000000",
+        "d": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
+        "fta": "10000000"
+      }
+    ]
+  }
 }
 ```
 
@@ -741,11 +768,16 @@ App sends **SignMessageDraftRequest** (or the same structure is used when delive
 interface SignMessageDraftRequest {
   id: string;
   method: 'signMsgDraft';
-  params: [<sign-message-draft-payload>]; // JSON string
+  params: {
+    vu?: number;
+    f?: string;
+    n?: string;
+    i: TransactionDraftItem[];
+  };
 }
 ```
 
-Where `<sign-message-draft-payload>` is a JSON string of an object with the same structure as the transaction draft payload (`vu`, `f`, `n`, `i` — see [Send Transaction Draft](#send-transaction-draft)). The wallet signs the message and returns it as a base64-encoded BoC instead of sending it to the blockchain.
+Where `params` has the same structure as the transaction draft payload (`vu`, `f`, `n`, `i` — see [Send Transaction Draft](#send-transaction-draft)). The wallet signs the message and returns it as a base64-encoded BoC instead of sending it to the blockchain.
 
 **Examples:**
 
@@ -753,7 +785,17 @@ Where `<sign-message-draft-payload>` is a JSON string of an object with the same
 {
   "id": "127",
   "method": "signMsgDraft",
-  "params": ["{\"vu\":1764424242,\"n\":\"-239\",\"i\":[{\"t\":\"ton\",\"a\":\"UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ\",\"am\":\"20000000\"}]}"]
+  "params": {
+    "vu": 1764424242,
+    "n": "-239",
+    "i": [
+      {
+        "t": "ton",
+        "a": "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
+        "am": "20000000"
+      }
+    ]
+  }
 }
 ```
 
@@ -795,11 +837,13 @@ App sends **ActionDraftRequest** (or the same structure is used when delivering 
 interface ActionDraftRequest {
   id: string;
   method: 'actionDraft';
-  params: [<action-draft-payload>]; // JSON string
+  params: {
+    url: string;
+  };
 }
 ```
 
-Where `<action-draft-payload>` is a JSON string of an object with:
+Where `params` is an object with:
 
 * `url` (string, required): action URL. The wallet MUST add the `address` query parameter. The action URL MUST respond with a JSON object containing `action_type` and `action` fields — see Action URL Response Examples below.
 
@@ -809,7 +853,9 @@ Where `<action-draft-payload>` is a JSON string of an object with:
 {
   "id": "126",
   "method": "actionDraft",
-  "params": ["{\"url\":\"https://example.com/dex?action=swap\"}"]
+  "params": {
+    "url": "https://example.com/dex?action=swap"
+  }
 }
 ```
 
