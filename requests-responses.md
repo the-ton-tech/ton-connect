@@ -100,6 +100,8 @@ type Feature =
     }
   | {
       name: 'SignMessage';
+      maxMessages: number; // maximum number of messages in one `SignMessage` that the wallet supports
+      extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies in `SignMessage`
     }
   | {
       name: 'SendTransactionDraft';
