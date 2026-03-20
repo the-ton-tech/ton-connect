@@ -93,21 +93,16 @@ type Feature =
       name: 'SendTransaction';
       maxMessages: number; // maximum number of messages in one `SendTransaction` that the wallet supports
       extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies
+      signMessageSupported?: boolean; // indicates if the wallet supports `signMessage`
     }
   | {
       name: 'SignData';
       types: ('text' | 'binary' | 'cell')[]; // array of supported data types for signing
     }
   | {
-      name: 'SignMessage';
-    }
-  | {
       name: 'SendTransactionDraft';
       types: ('ton' | 'jetton' | 'nft')[];
-    }
-  | {
-      name: 'SignMessageDraft';
-      types: ('ton' | 'jetton' | 'nft')[];
+      signMessageSupported?: boolean; // indicates if the wallet supports `signMsgDraft`
     }
   | {
       name: 'ActionDraft';
