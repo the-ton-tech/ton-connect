@@ -594,7 +594,7 @@ Where `<sign-message-payload>` is JSON string with the same structure as `<trans
 
 **Wallet behaviour:**
 
-- Wallet MUST prepare the external message with the provided messages (same as in `sendTransaction`).
+- Wallet MUST prepare the internal message with the provided messages (same as in `sendTransaction`).
 - Wallet MUST show the messages details to the user for approval.
 - Wallet MUST sign the message but MUST NOT send it to the blockchain.
 - Wallet returns the signed message as a base64-encoded BoC.
