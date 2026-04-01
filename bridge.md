@@ -142,6 +142,10 @@ interface TonConnectBridge {
     protocolVersion: number; // max supported Ton Connect version (e.g. 2)
     isWalletBrowser: boolean; // if the page is opened into wallet's browser
     connect(protocolVersion: number, message: ConnectRequest): Promise<ConnectEvent>;
+    connectWithIntent?: (payload: RawIntentPayload, options?: { protocolVersion: number; connectRequest: ConnectRequest }) => Promise<{
+        connectEvent?: ConnectEvent;
+        intentResponse: IntentResponse;
+    }>;
     restoreConnection(): Promise<ConnectEvent>;
     send(message: AppRequest): Promise<WalletResponse>;
     listen(callback: (event: WalletEvent) => void): () => void;
@@ -169,6 +173,12 @@ Detailed properties description: https://github.com/ton-blockchain/wallets-list#
 
 If `TonConnectBridge.walletInfo` is defined and the wallet is listed in the [wallets-list.json](https://github.com/ton-blockchain/wallets-list), `TonConnectBridge.walletInfo` properties will override corresponding wallet properties from the wallets-list.json. 
 
+
+#### connectWithIntent()
+
+An optional extension of `connect()` that also submits an intent (a pending action such as a transaction or sign request) in the same call.
+
+Returns a `connectEvent` if a new connection was established, and an `intentResponse` with the wallet's response to the submitted intent.
 
 #### connect()
 
