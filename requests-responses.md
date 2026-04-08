@@ -97,6 +97,11 @@ type Feature =
   | {
       name: 'SignData';
       types: ('text' | 'binary' | 'cell')[]; // array of supported data types for signing
+    }
+  | {
+      name: 'SignMessage';
+      maxMessages: number; // maximum number of messages in one `SignMessage` that the wallet supports
+      extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies
     };
 
 type ConnectItemReply = TonAddressItemReply | TonProofItemReply ...;
@@ -231,6 +236,7 @@ This approach **prioritizes local parsing of `stateInit`**, and uses the on-chai
 
 - sendTransaction
 - signData
+- signMessage
 - disconnect
 
 **Available events:**
@@ -584,6 +590,89 @@ If the data should be used in the TON Blockchain, use Cell format.
 If the data needs to be human-readable—but is not textual—use the **Cell** format. In this format, include a `schema` field that contains the TL-B schema of the payload. However, note that the Wallet is not required to display the content of the Cell.
 
 Otherwise, use Binary format.
+
+#### Sign Message
+
+Unlike `sendTransaction`, the `signMessage` method asks the wallet to **sign** internal messages without broadcasting them to the network. The wallet returns the signed internal message BoC, which the app can use for off-chain verification or deferred submission.
+
+The request payload has the same structure as `sendTransaction`.
+
+App sends **SignMessageRequest**:
+
+```tsx
+interface SignMessageRequest {
+	method: 'signMessage';
+	params: [<transaction-payload>];
+	id: string;
+}
+```
+
+Where `<transaction-payload>` is JSON with the same structure as in `sendTransaction`:
+
+* `valid_until` (integer, optional): unix timestamp. after the moment transaction will be invalid.
+* `network` (NETWORK, optional): The network (mainnet or testnet) where DApp intends to use the signed message. If not set, the wallet uses the network currently set in the wallet. If the `network` parameter is set, but the wallet has a different network set, the wallet should show an alert and DO NOT ALLOW TO SIGN this message.
+* `from` (string in raw or friendly format, optional) - The sender address from which DApp intends to sign the message. If not set, wallet allows user to select the sender's address at the moment of approval. If `from` parameter is set, the wallet should DO NOT ALLOW user to select the sender's address; If signing from the specified address is impossible, the wallet should show an alert and DO NOT ALLOW TO SIGN this message.
+* `messages` (array of messages): 1 to wallet's `maxMessages` outgoing messages from the wallet contract to other accounts.
+* `items` (array of items): alternative to `messages` — structured items as defined in [Structured Items](#structured-items). A payload MUST contain either `messages` or `items`, never both.
+
+Message structure:
+* `address` (string): message destination in user-friendly format
+* `amount` (decimal string): number of nanocoins to send.
+* `payload` (string base64, optional): raw one-cell BoC encoded in Base64.
+* `stateInit` (string base64, optional): raw once-cell BoC encoded in Base64.
+* `extra_currency` (object, optional): extra currency to send with the message.
+
+<details>
+<summary>Example</summary>
+
+```json5
+{
+  "valid_until": 1658253458,
+  "network": "-239",
+  "from": "0:348bcf827469c5fc38541c77fdd91d4e347eac200f6f2d9fd62dc08885f0415f",
+  "messages": [
+    {
+      "address": "EQBBJBB3HagsujBqVfqeDUPJ0kXjgTPLWPFFffuNXNiJL0aA",
+      "amount": "20000000",
+      "payload": "base64bocblahblahblah=="
+    }
+  ]
+}
+```
+</details>
+
+
+**Wallet behaviour:**
+
+The wallet MUST construct each outgoing message with **send mode 3** (`PAY_GAS_SEPARATELY + IGNORE_ERRORS`).
+
+Wallet replies with **SignMessageResponse**:
+
+```tsx
+type SignMessageResponse = SignMessageResponseSuccess | SignMessageResponseError;
+
+interface SignMessageResponseSuccess {
+    result: {
+        internal_boc: string; // base64 encoded signed internal message BoC
+    };
+    id: string;
+}
+
+interface SignMessageResponseError {
+   error: { code: number; message: string };
+   id: string;
+}
+```
+
+**Error codes:**
+
+| code | description                |
+|------|----------------------------|
+| 0    | Unknown error              |
+| 1    | Bad request                |
+| 100  | Unknown app                |
+| 300  | User declined the request  |
+| 400  | Method not supported       |
 
 #### Disconnect operation
 When user disconnects the wallet in the dApp, dApp should inform the wallet to help the wallet save resources and delete unnecessary session.
