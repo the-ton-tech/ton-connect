@@ -93,6 +93,7 @@ type Feature =
       name: 'SendTransaction';
       maxMessages: number; // maximum number of messages in one `SendTransaction` that the wallet supports
       extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies
+      itemTypes?: ('ton' | 'jetton' | 'nft')[]; // supported structured item types; absent means only raw `messages` are supported
     }
   | {
       name: 'SignData';
@@ -102,6 +103,7 @@ type Feature =
       name: 'SignMessage';
       maxMessages: number; // maximum number of messages in one `SignMessage` that the wallet supports
       extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies
+      itemTypes?: ('ton' | 'jetton' | 'nft')[]; // supported structured item types; absent means only raw `messages` are supported
     };
 
 type ConnectItemReply = TonAddressItemReply | TonProofItemReply ...;
@@ -316,6 +318,7 @@ Where `<transaction-payload>` is JSON string with following properties:
 * `network` (NETWORK, optional): The network (mainnet or testnet) where DApp intends to send the transaction. If not set, the transaction is sent to the network currently set in the wallet, but this is not safe and DApp should always strive to set the network. If the `network` parameter is set, but the wallet has a different network set, the wallet should show an alert and DO NOT ALLOW TO SEND this transaction.
 * `from` (string in raw or friendly format, optional) - The sender address from which DApp intends to send the transaction. If not set, wallet allows user to select the sender's address at the moment of transaction approval. If `from` parameter is set, the wallet should DO NOT ALLOW user to select the sender's address; If sending from the specified address is impossible, the wallet should show an alert and DO NOT ALLOW TO SEND this transaction.
 * `messages` (array of messages): 1 to wallet's `maxMessages` outgoing messages from the wallet contract to other accounts. All messages MUST be sent within a single external message and processed by the wallet contract in the provided order, however **the wallet cannot guarantee that messages will be delivered and executed in the same order by the recipient contracts**.
+* `items` (array of items): alternative to `messages` — structured items as defined in [Structured Items](#structured-items). A payload MUST contain either `messages` or `items`, never both.
 
 Message structure:
 * `address` (string): message destination in user-friendly format
@@ -345,6 +348,102 @@ To generate both address types using `@ton/core`:
 // No-bouncable format, for wallet contracts or expected-to-fail transactions
  const nonBouncable = address.toString({ urlSafe: true, bounceable: false });   // bounce = false
 ```
+
+##### Structured Items
+
+As an alternative to raw `messages`, the payload may contain an `items` array instead. Structured items describe **what** the user wants to do at a high level; the **wallet** constructs the corresponding BoC. A payload MUST contain either `messages` or `items`, never both.
+
+The wallet advertises supported item types via the `itemTypes` array in the `SendTransaction` feature. If `itemTypes` is absent, only raw `messages` are supported.
+
+```tsx
+type TransactionItem = TonItem | JettonItem | NftItem;
+```
+
+**TonItem** — simple TON transfer:
+
+| field            | type   | required | description                                         |
+|------------------|--------|----------|-----------------------------------------------------|
+| `type`           | string | yes      | `"ton"`                                             |
+| `address`        | string | yes      | Destination in user-friendly format                 |
+| `amount`         | string | yes      | Nanocoins as decimal string                         |
+| `payload`        | string | no       | Raw one-cell BoC in Base64                          |
+| `state_init`     | string | no       | Raw one-cell BoC in Base64                          |
+| `extra_currency` | object | no       | Extra currencies to send                            |
+
+**JettonItem** — Jetton transfer:
+
+| field                  | type   | required | description                                                        |
+|------------------------|--------|----------|--------------------------------------------------------------------|
+| `type`                 | string | yes      | `"jetton"`                                                         |
+| `master`               | string | yes      | Jetton master contract address                                     |
+| `destination`          | string | yes      | Recipient address                                                  |
+| `amount`               | string | yes      | Jetton amount in elementary units                                  |
+| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted               |
+| `response_destination` | string | no       | Where to send excess; defaults to sender                           |
+| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                                         |
+| `forward_amount`       | string | no       | Nanotons to forward to destination                                 |
+| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                                         |
+
+**NftItem** — NFT transfer:
+
+| field                  | type   | required | description                                                        |
+|------------------------|--------|----------|--------------------------------------------------------------------|
+| `type`                 | string | yes      | `"nft"`                                                            |
+| `nft_address`          | string | yes      | NFT item contract address                                          |
+| `new_owner`            | string | yes      | New owner address                                                  |
+| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted               |
+| `response_destination` | string | no       | Where to send excess; defaults to sender                           |
+| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                                         |
+| `forward_amount`       | string | no       | Nanotons to forward to destination                                 |
+| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                                         |
+
+<details>
+<summary>Structured items examples</summary>
+
+TON transfer:
+```json5
+{
+  "valid_until": 1764424242,
+  "items": [
+    {
+      "type": "ton",
+      "address": "UQAAAAA...AAJKZ",
+      "amount": "20000000",
+    }
+  ]
+}
+```
+
+Jetton transfer:
+```json5
+{
+  "valid_until": 1764424242,
+  "items": [
+    {
+      "type": "jetton",
+      "master": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
+      "destination": "UQAAAAA...AAJKZ",
+      "amount": "1000000",
+      "forward_amount": "10000000"
+    }
+  ]
+}
+```
+
+NFT transfer:
+```json5
+{
+  "valid_until": 1764424242,
+  "items": [
+    {
+      "type": "nft",
+      "nft_address": "EQ...",
+      "new_owner": "UQAAAAA...AAJKZ"
+    }
+  ]
+}
+```
+</details>
 
 <details>
 <summary>Common cases</summary>
@@ -595,7 +694,7 @@ Otherwise, use Binary format.
 
 Unlike `sendTransaction`, the `signMessage` method asks the wallet to **sign** internal messages without broadcasting them to the network. The wallet returns the signed internal message BoC, which the app can use for off-chain verification or deferred submission.
 
-The request payload has the same structure as `sendTransaction`.
+The request payload has the same structure as `sendTransaction` (including support for [Structured Items](#structured-items) when the wallet advertises `itemTypes` in the `SignMessage` feature).
 
 App sends **SignMessageRequest**:
 
