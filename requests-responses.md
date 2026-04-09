@@ -372,30 +372,32 @@ type TransactionItem = TonItem | JettonItem | NftItem;
 
 **JettonItem** — Jetton transfer:
 
-| field                  | type   | required | description                                                        |
-|------------------------|--------|----------|--------------------------------------------------------------------|
-| `type`                 | string | yes      | `"jetton"`                                                         |
-| `master`               | string | yes      | Jetton master contract address                                     |
-| `destination`          | string | yes      | Recipient address                                                  |
-| `amount`               | string | yes      | Jetton amount in elementary units                                  |
-| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted               |
-| `response_destination` | string | no       | Where to send excess; defaults to sender                           |
-| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                                         |
-| `forward_amount`       | string | no       | Nanotons to forward to destination                                 |
-| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                                         |
+| field                  | type   | required | description                                          |
+|------------------------|--------|----------|------------------------------------------------------|
+| `type`                 | string | yes      | `"jetton"`                                           |
+| `master`               | string | yes      | Jetton master contract address                       |
+| `destination`          | string | yes      | Recipient address                                    |
+| `amount`               | string | yes      | Jetton amount in elementary units                    |
+| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted |
+| `query_id`             | string | no       | Arbitrary request number                             |
+| `response_destination` | string | no       | Where to send excess; defaults to sender             |
+| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                           |
+| `forward_amount`       | string | no       | Nanotons to forward to destination                   |
+| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                           |
 
 **NftItem** — NFT transfer:
 
-| field                  | type   | required | description                                                        |
-|------------------------|--------|----------|--------------------------------------------------------------------|
-| `type`                 | string | yes      | `"nft"`                                                            |
-| `nft_address`          | string | yes      | NFT item contract address                                          |
-| `new_owner`            | string | yes      | New owner address                                                  |
-| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted               |
-| `response_destination` | string | no       | Where to send excess; defaults to sender                           |
-| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                                         |
-| `forward_amount`       | string | no       | Nanotons to forward to destination                                 |
-| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                                         |
+| field                  | type   | required | description                                          |
+|------------------------|--------|----------|------------------------------------------------------|
+| `type`                 | string | yes      | `"nft"`                                              |
+| `nft_address`          | string | yes      | NFT item contract address                            |
+| `new_owner`            | string | yes      | New owner address                                    |
+| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted |
+| `query_id`             | string | no       | Arbitrary request number                             |
+| `response_destination` | string | no       | Where to send excess; defaults to sender             |
+| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                           |
+| `forward_amount`       | string | no       | Nanotons to forward to destination                   |
+| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                           |
 
 <details>
 <summary>Structured items examples</summary>
