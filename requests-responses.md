@@ -70,6 +70,7 @@ type ConnectEventSuccess = {
       items: ConnectItemReply[];
       device: DeviceInfo;   
   }
+  response?: WalletResponse; // response to the embedded app request (deep link request), see below
 }
 type ConnectEventError = {
   event: "connect_error",
@@ -838,6 +839,7 @@ type ConnectEventSuccess = {
         items: ConnectItemReply[];
         device: DeviceInfo;
     }
+    response?: WalletResponse; // present when a deep link request (`req` parameter) was processed
 }
 type ConnectEventError = {
     event: "connect_error",
@@ -848,3 +850,5 @@ type ConnectEventError = {
     }
 }
 ```
+
+The `response` field is only present when the wallet processed an embedded [deep link request](bridge.md#deep-link-requests). See the [bridge specification](bridge.md#deep-link-requests) for the wire format and examples.
