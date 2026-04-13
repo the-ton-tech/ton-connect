@@ -274,7 +274,7 @@ Wallet doesn't accept any request with an id that does not greater the last proc
 type WalletResponse = WalletResponseSuccess | WalletResponseError;
 
 interface WalletResponseSuccess {
-    result: string;
+    result: unknown; // string, object or any other result
     id: string;
 }
 

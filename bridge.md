@@ -150,6 +150,12 @@ The value of `req` is a **compact wire-format** JSON object encoded as Base64-UR
 
 #### Wire format
 
+Wire format describes `AppWireRequest`:
+
+```typescript
+type AppWireRequest = SendTransactionWireRequest | SignMessageWireRequest | SignDataWireRequest;
+```
+
 Every wire request has a `m` (method) field:
 
 | `m` value | Method            |
