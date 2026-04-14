@@ -105,6 +105,9 @@ type Feature =
       maxMessages: number; // maximum number of messages in one `SignMessage` that the wallet supports
       extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies
       itemTypes?: ('ton' | 'jetton' | 'nft')[]; // supported structured item types; absent means only raw `messages` are supported
+    }
+  | {
+      name: 'EmbeddedRequest'; // indicates the wallet can process `req` parameter in the connect URL
     };
 
 type ConnectItemReply = TonAddressItemReply | TonProofItemReply ...;

@@ -146,6 +146,8 @@ tc://?
 
 The `req` parameter allows embedding an app request (e.g. a transaction) directly in the connect URL so that the wallet handles **connection and action in a single step**. This eliminates a round-trip for common flows like "connect and pay".
 
+Wallets that support this feature MUST include `{ name: 'EmbeddedRequest' }` in the `features` array of [DeviceInfo](requests-responses.md#initiating-connection). This allows the SDK to know which wallets can process the `req` parameter and optimize the connect flow accordingly. Wallets that do not advertise this feature MUST silently ignore the `req` parameter if present.
+
 The value of `req` is a **compact wire-format** JSON object encoded as Base64-URL (no padding). Field names are abbreviated to minimize URL length.
 
 #### Wire format
