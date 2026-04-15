@@ -97,7 +97,7 @@ https://<wallet-universal-url>?
                                id=<to_hex_str(A)>&
                                r=<urlsafe(json.stringify(ConnectRequest))>&
                                ret=back&
-                               req=<base64url(json.stringify(AppWireRequest))>
+                               e=<base64url(json.stringify(EmbeddedWireRequest))>
 ```
 
 Parameter **v** specifies the protocol version. Unsupported versions are not accepted by the wallets.
@@ -106,7 +106,7 @@ Parameter **id** specifies app’s Client ID encoded as hex (without '0x' prefix
 
 Parameter **r** specifies URL-safe json [ConnectRequest](requests-responses.md#initiating-connection).
 
-Parameter **req** (optional) specifies a compact [App Request](#deep-link-requests) embedded in the connect URL. The value is Base64-URL-encoded JSON. When present, the wallet processes the connection **and** the request in a single step, returning the result in the `response` field of [ConnectEventSuccess](requests-responses.md#initiating-connection).
+Parameter **e** (optional) specifies a compact [Embedded Request](#embedded-requests) in the connect URL. The value is Base64-URL-encoded JSON. When present, the wallet processes the connection **and** the request in a single step, returning the result in the `response` field of [ConnectEventSuccess](requests-responses.md#initiating-connection).
 
 Parameter **ret** (optional) specifies return strategy for the deeplink when user signs/declines the request.
 - 'back' (default) means return to the app which initialized deeplink jump (e.g. browser, native app, ...),
@@ -138,24 +138,24 @@ tc://?
        id=<to_hex_str(A)>&
        r=<urlsafe(json.stringify(ConnectRequest))>&
        ret=back&
-       req=<base64url(json.stringify(AppWireRequest))>
+       e=<base64url(json.stringify(EmbeddedWireRequest))>
 ```
 
 
-### Deep link requests
+### Embedded requests
 
-The `req` parameter allows embedding an app request (e.g. a transaction) directly in the connect URL so that the wallet handles **connection and action in a single step**. This eliminates a round-trip for common flows like "connect and pay".
+The `e` parameter allows embedding a request (e.g. a transaction) directly in the connect URL so that the wallet handles **connection and action in a single step**. This eliminates a round-trip for common flows like "connect and pay".
 
-Wallets that support this feature MUST include `{ name: 'EmbeddedRequest' }` in the `features` array of [DeviceInfo](requests-responses.md#initiating-connection). This allows the SDK to know which wallets can process the `req` parameter and optimize the connect flow accordingly. Wallets that do not advertise this feature MUST silently ignore the `req` parameter if present.
+Wallets that support this feature MUST include `{ name: 'EmbeddedRequest' }` in the `features` array of [DeviceInfo](requests-responses.md#initiating-connection). This allows the SDK to know which wallets can process the `e` parameter and optimize the connect flow accordingly. Wallets that do not support this feature MUST silently ignore the `e` parameter if present.
 
-The value of `req` is a **compact wire-format** JSON object encoded as Base64-URL (no padding). Field names are abbreviated to minimize URL length.
+The value of `e` is a **compact wire-format** JSON object encoded as Base64-URL (no padding). Field names are abbreviated to minimize URL length.
 
 #### Wire format
 
-Wire format describes `AppWireRequest`:
+Wire format describes `EmbeddedWireRequest`:
 
 ```typescript
-type AppWireRequest = SendTransactionWireRequest | SignMessageWireRequest | SignDataWireRequest;
+type EmbeddedWireRequest = SendTransactionWireRequest | SignMessageWireRequest | SignDataWireRequest;
 ```
 
 Every wire request has a `m` (method) field:
@@ -193,68 +193,78 @@ Every wire request has a `m` (method) field:
 
 **WireTonItem** (`t: "ton"`):
 
-| field | full name        | type   | required |
-|-------|------------------|--------|----------|
-| `t`   | type             | string | yes      |
-| `a`   | address          | string | yes      |
-| `am`  | amount           | string | yes      |
-| `p`   | payload          | string | no       |
-| `si`  | state_init       | string | no       |
-| `ec`  | extra_currency   | object | no       |
+| field | full name        | type      | required |
+|-------|------------------|-----------|----------|
+| `t`   | type             | `"ton"`   | yes      |
+| `a`   | address          | string    | yes      |
+| `am`  | amount           | string    | yes      |
+| `p`   | payload          | string    | no       |
+| `si`  | stateInit        | string    | no       |
+| `ec`  | extra_currency   | object    | no       |
 
 **WireJettonItem** (`t: "jetton"`):
 
-| field | full name             | type   | required |
-|-------|-----------------------|--------|----------|
-| `t`   | type                  | string | yes      |
-| `ma`  | master                | string | yes      |
-| `d`   | destination           | string | yes      |
-| `am`  | amount                | string | yes      |
-| `aa`  | attach_amount         | string | no       |
-| `rd`  | response_destination  | string | no       |
-| `cp`  | custom_payload        | string | no       |
-| `fa`  | forward_amount        | string | no       |
-| `fp`  | forward_payload       | string | no       |
-| `qi`  | query_id              | string | no       |
+| field | full name             | type        | required |
+|-------|-----------------------|-------------|----------|
+| `t`   | type                  | `"jetton"`  | yes      |
+| `ma`  | master                | string      | yes      |
+| `d`   | destination           | string      | yes      |
+| `am`  | amount                | string      | yes      |
+| `aa`  | attachAmount          | string      | no       |
+| `rd`  | responseDestination   | string      | no       |
+| `cp`  | customPayload         | string      | no       |
+| `fa`  | forwardAmount         | string      | no       |
+| `fp`  | forwardPayload        | string      | no       |
+| `qi`  | queryId               | string      | no       |
 
 **WireNftItem** (`t: "nft"`):
 
-| field | full name             | type   | required |
-|-------|-----------------------|--------|----------|
-| `t`   | type                  | string | yes      |
-| `na`  | nft_address           | string | yes      |
-| `no`  | new_owner             | string | yes      |
-| `aa`  | attach_amount         | string | no       |
-| `rd`  | response_destination  | string | no       |
-| `cp`  | custom_payload        | string | no       |
-| `fa`  | forward_amount        | string | no       |
-| `fp`  | forward_payload       | string | no       |
-| `qi`  | query_id              | string | no       |
+| field | full name             | type      | required |
+|-------|-----------------------|-----------|----------|
+| `t`   | type                  | `"nft"`   | yes      |
+| `na`  | nftAddress            | string    | yes      |
+| `no`  | newOwner              | string    | yes      |
+| `aa`  | attachAmount          | string    | no       |
+| `rd`  | responseDestination   | string    | no       |
+| `cp`  | customPayload         | string    | no       |
+| `fa`  | forwardAmount         | string    | no       |
+| `fp`  | forwardPayload        | string    | no       |
+| `qi`  | queryId               | string    | no       |
 
 ##### signData (`m: "sd"`)
 
 ```tsx
 {
   m: "sd";
-  f?: string;   // from address
-  n?: string;   // network (chain id)
-  t: "text" | "binary" | "cell";  // payload type
-  // ... type-specific fields:
+  f?: string;                      // from address
+  n?: string;                      // network (chain id)
+  t: "text" | "binary" | "cell";   // payload type (discriminator)
+  // ... type-specific fields depending on `t`:
 }
 ```
 
-Type-specific fields:
+When `t` is `"text"`:
 
-| type     | field | full name | description                  |
-|----------|-------|-----------|------------------------------|
-| `text`   | `tx`  | text      | UTF-8 text to sign           |
-| `binary` | `b`   | bytes     | Base64-encoded bytes         |
-| `cell`   | `s`   | schema    | TL-B schema string           |
-| `cell`   | `c`   | cell      | Base64-encoded BoC           |
+| field | full name | type   | required | description            |
+|-------|-----------|--------|----------|------------------------|
+| `tx`  | text      | string | yes      | UTF-8 text to sign     |
+
+When `t` is `"binary"`:
+
+| field | full name | type   | required | description            |
+|-------|-----------|--------|----------|------------------------|
+| `b`   | bytes     | string | yes      | Base64-encoded bytes   |
+
+When `t` is `"cell"`:
+
+| field | full name | type   | required | description            |
+|-------|-----------|--------|----------|------------------------|
+| `s`   | schema    | string | yes      | TL-B schema string     |
+| `c`   | cell      | string | yes      | Base64-encoded BoC     |
 
 #### Wallet response
 
-When the wallet processes a deep link request, it includes the result in the `response` field of `ConnectEventSuccess`:
+When the wallet processes an embedded request, it includes the result in the `response` field of `ConnectEventSuccess`:
 
 ```tsx
 type ConnectEventSuccess = {
@@ -264,17 +274,17 @@ type ConnectEventSuccess = {
       items: ConnectItemReply[];
       device: DeviceInfo;
   }
-  response?: WalletResponse; // present when `req` was processed
+  response?: WalletResponse; // present when `e` was processed
 }
 ```
 
 The `response` follows the standard [WalletResponse](requests-responses.md#structure) format — either `{ result: ... }` or `{ error: { code, message } }`. The `result` shape depends on the method:
 
 - **sendTransaction**: `result` is the BoC string (same as regular `sendTransaction`)
-- **signMessage**: `result` is `{ internal_boc: string }` (same as regular `signMessage`)
+- **signMessage**: `result` is `{ internalBoc: string }` (same as regular `signMessage`)
 - **signData**: `result` is `{ signature, address, timestamp, domain, payload }` (same as regular `signData`)
 
-Note: unlike regular RPC responses, the deep link response does **not** contain an `id` field, because the request was not assigned an ID.
+Note: unlike regular RPC responses, the embedded request response does **not** contain an `id` field, because the request was not assigned an ID.
 
 <details>
 <summary>Example: connect and send transaction</summary>
@@ -297,7 +307,7 @@ Wire request (before Base64-URL encoding):
 
 Universal link:
 ```
-https://wallet.example.com/?v=2&id=abc123&r=...&req=eyJtIjoic3QiLCJuIjoiLTIzOSIsInZ1IjoxNzY0NDI0MjQyLCJpIjpbeyJ0IjoidG9uIiwiYSI6IlVRQUFBQUEuLi5BQUpLWiIsImFtIjoiMjAwMDAwMDAifV19
+https://wallet.example.com/?v=2&id=abc123&r=...&e=eyJtIjoic3QiLCJuIjoiLTIzOSIsInZ1IjoxNzY0NDI0MjQyLCJpIjpbeyJ0IjoidG9uIiwiYSI6IlVRQUFBQUEuLi5BQUpLWiIsImFtIjoiMjAwMDAwMDAifV19
 ```
 
 ConnectEvent with response:

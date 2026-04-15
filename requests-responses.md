@@ -70,7 +70,7 @@ type ConnectEventSuccess = {
       items: ConnectItemReply[];
       device: DeviceInfo;   
   }
-  response?: WalletResponse; // response to the embedded app request (deep link request), see below
+  response?: WalletResponse; // response to the embedded request, see bridge.md
 }
 type ConnectEventError = {
   event: "connect_error",
@@ -107,7 +107,7 @@ type Feature =
       itemTypes?: ('ton' | 'jetton' | 'nft')[]; // supported structured item types; absent means only raw `messages` are supported
     }
   | {
-      name: 'EmbeddedRequest'; // indicates the wallet can process `req` parameter in the connect URL
+      name: 'EmbeddedRequest'; // indicates the wallet can process `e` parameter in the connect URL
     };
 
 type ConnectItemReply = TonAddressItemReply | TonProofItemReply ...;
@@ -277,7 +277,7 @@ Wallet doesn't accept any request with an id that does not greater the last proc
 type WalletResponse = WalletResponseSuccess | WalletResponseError;
 
 interface WalletResponseSuccess {
-    result: unknown; // string, object or any other result
+    result: string | object;
     id: string;
 }
 
@@ -365,43 +365,43 @@ type TransactionItem = TonItem | JettonItem | NftItem;
 
 **TonItem** — simple TON transfer:
 
-| field            | type   | required | description                                         |
-|------------------|--------|----------|-----------------------------------------------------|
-| `type`           | string | yes      | `"ton"`                                             |
-| `address`        | string | yes      | Destination in user-friendly format                 |
-| `amount`         | string | yes      | Nanocoins as decimal string                         |
-| `payload`        | string | no       | Raw one-cell BoC in Base64                          |
-| `state_init`     | string | no       | Raw one-cell BoC in Base64                          |
-| `extra_currency` | object | no       | Extra currencies to send                            |
+| field            | type     | required | description                                         |
+|------------------|----------|----------|-----------------------------------------------------|
+| `type`           | `"ton"`  | yes      | Item discriminator                                  |
+| `address`        | string   | yes      | Destination in user-friendly format                 |
+| `amount`         | string   | yes      | Nanocoins as decimal string                         |
+| `payload`        | string   | no       | Raw one-cell BoC in Base64                          |
+| `stateInit`      | string   | no       | Raw one-cell BoC in Base64                          |
+| `extra_currency` | object   | no       | Extra currencies to send                            |
 
 **JettonItem** — Jetton transfer:
 
-| field                  | type   | required | description                                          |
-|------------------------|--------|----------|------------------------------------------------------|
-| `type`                 | string | yes      | `"jetton"`                                           |
-| `master`               | string | yes      | Jetton master contract address                       |
-| `destination`          | string | yes      | Recipient address                                    |
-| `amount`               | string | yes      | Jetton amount in elementary units                    |
-| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted |
-| `query_id`             | string | no       | Arbitrary request number                             |
-| `response_destination` | string | no       | Where to send excess; defaults to sender             |
-| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                           |
-| `forward_amount`       | string | no       | Nanotons to forward to destination                   |
-| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                           |
+| field                  | type       | required | description                                                   |
+|------------------------|------------|----------|---------------------------------------------------------------|
+| `type`                 | `"jetton"` | yes      | Item discriminator                                            |
+| `master`               | string     | yes      | Jetton master contract address                                |
+| `destination`          | string     | yes      | Recipient address                                             |
+| `amount`               | string     | yes      | Jetton amount in elementary units                             |
+| `attachAmount`         | string     | no       | TON to attach for fees; wallet calculates if omitted          |
+| `queryId`              | string     | no       | Arbitrary request number                                      |
+| `responseDestination`  | string     | no       | Where to send excess; wallet uses sender if omitted           |
+| `customPayload`        | string     | no       | Raw one-cell BoC in Base64                                    |
+| `forwardAmount`        | string     | no       | Nanotons to forward to destination; defaults to `"1"`         |
+| `forwardPayload`       | string     | no       | Raw one-cell BoC in Base64                                    |
 
 **NftItem** — NFT transfer:
 
-| field                  | type   | required | description                                          |
-|------------------------|--------|----------|------------------------------------------------------|
-| `type`                 | string | yes      | `"nft"`                                              |
-| `nft_address`          | string | yes      | NFT item contract address                            |
-| `new_owner`            | string | yes      | New owner address                                    |
-| `attach_amount`        | string | no       | TON to attach for fees; wallet calculates if omitted |
-| `query_id`             | string | no       | Arbitrary request number                             |
-| `response_destination` | string | no       | Where to send excess; defaults to sender             |
-| `custom_payload`       | string | no       | Raw one-cell BoC in Base64                           |
-| `forward_amount`       | string | no       | Nanotons to forward to destination                   |
-| `forward_payload`      | string | no       | Raw one-cell BoC in Base64                           |
+| field                  | type     | required | description                                                   |
+|------------------------|----------|----------|---------------------------------------------------------------|
+| `type`                 | `"nft"`  | yes      | Item discriminator                                            |
+| `nftAddress`           | string   | yes      | NFT item contract address                                     |
+| `newOwner`             | string   | yes      | New owner address                                             |
+| `attachAmount`         | string   | no       | TON to attach for fees; wallet calculates if omitted          |
+| `queryId`              | string   | no       | Arbitrary request number                                      |
+| `responseDestination`  | string   | no       | Where to send excess; wallet uses sender if omitted           |
+| `customPayload`        | string   | no       | Raw one-cell BoC in Base64                                    |
+| `forwardAmount`        | string   | no       | Nanotons to forward to new owner; defaults to `"1"`           |
+| `forwardPayload`       | string   | no       | Raw one-cell BoC in Base64                                    |
 
 <details>
 <summary>Structured items examples</summary>
@@ -430,7 +430,7 @@ Jetton transfer:
       "master": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
       "destination": "UQAAAAA...AAJKZ",
       "amount": "1000000",
-      "forward_amount": "10000000"
+      "forwardAmount": "10000000"
     }
   ]
 }
@@ -443,8 +443,8 @@ NFT transfer:
   "items": [
     {
       "type": "nft",
-      "nft_address": "EQ...",
-      "new_owner": "UQAAAAA...AAJKZ"
+      "nftAddress": "EQ...",
+      "newOwner": "UQAAAAA...AAJKZ"
     }
   ]
 }
@@ -698,9 +698,11 @@ Otherwise, use Binary format.
 
 #### Sign Message
 
-Unlike `sendTransaction`, the `signMessage` method asks the wallet to **sign** internal messages without broadcasting them to the network. The wallet returns the signed internal message BoC, which the app can use for off-chain verification or deferred submission.
+Unlike `sendTransaction`, the `signMessage` method asks the wallet to **sign** internal messages without broadcasting them to the network. The wallet returns the signed internal message BoC, which the app can use for deferred submission.
 
-The request payload has the same structure as `sendTransaction` (including support for [Structured Items](#structured-items) when the wallet advertises `itemTypes` in the `SignMessage` feature).
+> **Wallet behaviour note:** Even though the wallet does not broadcast the signed message, it MUST display a confirmation dialog warning the user that the signed message may transfer assets and could be submitted to the network later by the requesting application.
+
+The request payload has the same structure as `sendTransaction`.
 
 App sends **SignMessageRequest**:
 
@@ -717,7 +719,7 @@ Where `<transaction-payload>` is JSON with the same structure as in `sendTransac
 * `valid_until` (integer, optional): unix timestamp. after the moment transaction will be invalid.
 * `network` (NETWORK, optional): The network (mainnet or testnet) where DApp intends to use the signed message. If not set, the wallet uses the network currently set in the wallet. If the `network` parameter is set, but the wallet has a different network set, the wallet should show an alert and DO NOT ALLOW TO SIGN this message.
 * `from` (string in raw or friendly format, optional) - The sender address from which DApp intends to sign the message. If not set, wallet allows user to select the sender's address at the moment of approval. If `from` parameter is set, the wallet should DO NOT ALLOW user to select the sender's address; If signing from the specified address is impossible, the wallet should show an alert and DO NOT ALLOW TO SIGN this message.
-* `messages` (array of messages): 1 to wallet's `maxMessages` outgoing messages from the wallet contract to other accounts.
+* `messages` (array of messages): 1 to wallet's `maxMessages` outgoing messages from the wallet contract to other accounts. All messages MUST be built into a single internal message and processed by the wallet contract in the provided order, however **the wallet cannot guarantee that messages will be delivered and executed in the same order by the recipient contracts**. A payload MUST contain either `messages` or `items`, never both.
 * `items` (array of items): alternative to `messages` — structured items as defined in [Structured Items](#structured-items). A payload MUST contain either `messages` or `items`, never both.
 
 Message structure:
@@ -758,7 +760,7 @@ type SignMessageResponse = SignMessageResponseSuccess | SignMessageResponseError
 
 interface SignMessageResponseSuccess {
     result: {
-        internal_boc: string; // base64 encoded signed internal message BoC
+        internalBoc: string; // base64 encoded signed internal message BoC
     };
     id: string;
 }
@@ -842,7 +844,7 @@ type ConnectEventSuccess = {
         items: ConnectItemReply[];
         device: DeviceInfo;
     }
-    response?: WalletResponse; // present when a deep link request (`req` parameter) was processed
+    response?: WalletResponse; // present when an embedded request (`e` parameter) was processed
 }
 type ConnectEventError = {
     event: "connect_error",
@@ -854,4 +856,4 @@ type ConnectEventError = {
 }
 ```
 
-The `response` field is only present when the wallet processed an embedded [deep link request](bridge.md#deep-link-requests). See the [bridge specification](bridge.md#deep-link-requests) for the wire format and examples.
+The `response` field is only present when the wallet processed an [embedded request](bridge.md#embedded-requests). See the [bridge specification](bridge.md#embedded-requests) for the wire format and examples.
