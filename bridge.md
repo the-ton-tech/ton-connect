@@ -96,7 +96,8 @@ https://<wallet-universal-url>?
                                v=2&
                                id=<to_hex_str(A)>&
                                r=<urlsafe(json.stringify(ConnectRequest))>&
-                               ret=back
+                               ret=back&
+                               e=<base64url(json.stringify(EmbeddedWireRequest))>
 ```
 
 Parameter **v** specifies the protocol version. Unsupported versions are not accepted by the wallets.
@@ -104,6 +105,8 @@ Parameter **v** specifies the protocol version. Unsupported versions are not acc
 Parameter **id** specifies app’s Client ID encoded as hex (without '0x' prefix).
 
 Parameter **r** specifies URL-safe json [ConnectRequest](requests-responses.md#initiating-connection).
+
+Parameter **e** (optional) specifies a compact [Embedded Request](#embedded-requests) in the connect URL. The value is Base64-URL-encoded JSON. When present, the wallet processes the connection **and** the request in a single step, returning the result in the `response` field of [ConnectEventSuccess](requests-responses.md#initiating-connection).
 
 Parameter **ret** (optional) specifies return strategy for the deeplink when user signs/declines the request.
 - 'back' (default) means return to the app which initialized deeplink jump (e.g. browser, native app, ...),
@@ -134,8 +137,194 @@ tc://?
        v=2&
        id=<to_hex_str(A)>&
        r=<urlsafe(json.stringify(ConnectRequest))>&
-       ret=back
+       ret=back&
+       e=<base64url(json.stringify(EmbeddedWireRequest))>
 ```
+
+
+### Embedded requests
+
+The `e` parameter allows embedding a request (e.g. a transaction) directly in the connect URL so that the wallet handles **connection and action in a single step**. This eliminates a round-trip for common flows like "connect and pay".
+
+Wallets that support this feature MUST include `{ name: 'EmbeddedRequest' }` in the `features` array of [DeviceInfo](requests-responses.md#initiating-connection). This allows the SDK to know which wallets can process the `e` parameter and optimize the connect flow accordingly. Wallets that do not support this feature MUST silently ignore the `e` parameter if present.
+
+The value of `e` is a **compact wire-format** JSON object encoded as Base64-URL (no padding). Field names are abbreviated to minimize URL length.
+
+#### Wire format
+
+Wire format describes `EmbeddedWireRequest`:
+
+```typescript
+type EmbeddedWireRequest = SendTransactionWireRequest | SignMessageWireRequest | SignDataWireRequest;
+```
+
+Every wire request has a `m` (method) field:
+
+| `m` value | Method            |
+|-----------|-------------------|
+| `st`      | `sendTransaction` |
+| `sm`      | `signMessage`     |
+| `sd`      | `signData`        |
+
+##### sendTransaction / signMessage (`m: "st"` or `m: "sm"`)
+
+```tsx
+{
+  m: "st" | "sm";
+  f?: string;                         // from address
+  n?: string;                         // network (chain id, e.g. "-239")
+  vu?: number;                        // valid_until (unix timestamp)
+  ms?: WireMessage[];                 // legacy messages (mutually exclusive with `i`)
+  i?: WireItem[];                     // structured items (mutually exclusive with `ms`)
+}
+```
+
+**WireMessage**
+
+| field | full name        | type   | required |
+|-------|------------------|--------|----------|
+| `a`   | address          | string | yes      |
+| `am`  | amount           | string | yes      |
+| `p`   | payload          | string | no       |
+| `si`  | stateInit        | string | no       |
+| `ec`  | extra_currency   | object | no       |
+
+**WireItem** — structured items use the same types as [Structured Items](requests-responses.md#structured-items) but with abbreviated field names:
+
+**WireTonItem** (`t: "ton"`):
+
+| field | full name        | type      | required |
+|-------|------------------|-----------|----------|
+| `t`   | type             | `"ton"`   | yes      |
+| `a`   | address          | string    | yes      |
+| `am`  | amount           | string    | yes      |
+| `p`   | payload          | string    | no       |
+| `si`  | stateInit        | string    | no       |
+| `ec`  | extra_currency   | object    | no       |
+
+**WireJettonItem** (`t: "jetton"`):
+
+| field | full name             | type        | required |
+|-------|-----------------------|-------------|----------|
+| `t`   | type                  | `"jetton"`  | yes      |
+| `ma`  | master                | string      | yes      |
+| `d`   | destination           | string      | yes      |
+| `am`  | amount                | string      | yes      |
+| `aa`  | attachAmount          | string      | no       |
+| `rd`  | responseDestination   | string      | no       |
+| `cp`  | customPayload         | string      | no       |
+| `fa`  | forwardAmount         | string      | no       |
+| `fp`  | forwardPayload        | string      | no       |
+| `qi`  | queryId               | string      | no       |
+
+**WireNftItem** (`t: "nft"`):
+
+| field | full name             | type      | required |
+|-------|-----------------------|-----------|----------|
+| `t`   | type                  | `"nft"`   | yes      |
+| `na`  | nftAddress            | string    | yes      |
+| `no`  | newOwner              | string    | yes      |
+| `aa`  | attachAmount          | string    | no       |
+| `rd`  | responseDestination   | string    | no       |
+| `cp`  | customPayload         | string    | no       |
+| `fa`  | forwardAmount         | string    | no       |
+| `fp`  | forwardPayload        | string    | no       |
+| `qi`  | queryId               | string    | no       |
+
+##### signData (`m: "sd"`)
+
+```tsx
+{
+  m: "sd";
+  f?: string;                      // from address
+  n?: string;                      // network (chain id)
+  t: "text" | "binary" | "cell";   // payload type (discriminator)
+  // ... type-specific fields depending on `t`:
+}
+```
+
+When `t` is `"text"`:
+
+| field | full name | type   | required | description            |
+|-------|-----------|--------|----------|------------------------|
+| `tx`  | text      | string | yes      | UTF-8 text to sign     |
+
+When `t` is `"binary"`:
+
+| field | full name | type   | required | description            |
+|-------|-----------|--------|----------|------------------------|
+| `b`   | bytes     | string | yes      | Base64-encoded bytes   |
+
+When `t` is `"cell"`:
+
+| field | full name | type   | required | description            |
+|-------|-----------|--------|----------|------------------------|
+| `s`   | schema    | string | yes      | TL-B schema string     |
+| `c`   | cell      | string | yes      | Base64-encoded BoC     |
+
+#### Wallet response
+
+When the wallet processes an embedded request, it includes the result in the `response` field of `ConnectEventSuccess`:
+
+```tsx
+type ConnectEventSuccess = {
+  event: "connect";
+  id: number;
+  payload: {
+      items: ConnectItemReply[];
+      device: DeviceInfo;
+  }
+  response?: WalletResponse; // present when `e` was processed
+}
+```
+
+The `response` follows the standard [WalletResponse](requests-responses.md#structure) format — either `{ result: ... }` or `{ error: { code, message } }`. The `result` shape depends on the method:
+
+- **sendTransaction**: `result` is the BoC string (same as regular `sendTransaction`)
+- **signMessage**: `result` is `{ internalBoc: string }` (same as regular `signMessage`)
+- **signData**: `result` is `{ signature, address, timestamp, domain, payload }` (same as regular `signData`)
+
+Note: unlike regular RPC responses, the embedded request response does **not** contain an `id` field, because the request was not assigned an ID.
+
+<details>
+<summary>Example: connect and send transaction</summary>
+
+Wire request (before Base64-URL encoding):
+```json5
+{
+  "m": "st",
+  "n": "-239",
+  "vu": 1764424242,
+  "i": [
+    {
+      "t": "ton",
+      "a": "UQAAAAA...AAJKZ",
+      "am": "20000000"
+    }
+  ]
+}
+```
+
+Universal link:
+```
+https://wallet.example.com/?v=2&id=abc123&r=...&e=eyJtIjoic3QiLCJuIjoiLTIzOSIsInZ1IjoxNzY0NDI0MjQyLCJpIjpbeyJ0IjoidG9uIiwiYSI6IlVRQUFBQUEuLi5BQUpLWiIsImFtIjoiMjAwMDAwMDAifV19
+```
+
+ConnectEvent with response:
+```json5
+{
+  "event": "connect",
+  "id": 1,
+  "payload": {
+    "items": [{ "name": "ton_addr", /* ... */ }],
+    "device": { /* ... */ }
+  },
+  "response": {
+    "result": "te6ccg...base64boc..."
+  }
+}
+```
+</details>
 
 
 ## JS bridge

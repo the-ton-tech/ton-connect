@@ -70,6 +70,7 @@ type ConnectEventSuccess = {
       items: ConnectItemReply[];
       device: DeviceInfo;   
   }
+  response?: WalletResponse; // response to the embedded request, see bridge.md
 }
 type ConnectEventError = {
   event: "connect_error",
@@ -93,10 +94,20 @@ type Feature =
       name: 'SendTransaction';
       maxMessages: number; // maximum number of messages in one `SendTransaction` that the wallet supports
       extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies
+      itemTypes?: ('ton' | 'jetton' | 'nft')[]; // supported structured item types; absent means only raw `messages` are supported
     }
   | {
       name: 'SignData';
       types: ('text' | 'binary' | 'cell')[]; // array of supported data types for signing
+    }
+  | {
+      name: 'SignMessage';
+      maxMessages: number; // maximum number of messages in one `SignMessage` that the wallet supports
+      extraCurrencySupported?: boolean; // indicates if the wallet supports extra currencies
+      itemTypes?: ('ton' | 'jetton' | 'nft')[]; // supported structured item types; absent means only raw `messages` are supported
+    }
+  | {
+      name: 'EmbeddedRequest'; // indicates the wallet can process `e` parameter in the connect URL
     };
 
 type ConnectItemReply = TonAddressItemReply | TonProofItemReply ...;
@@ -231,6 +242,7 @@ This approach **prioritizes local parsing of `stateInit`**, and uses the on-chai
 
 - sendTransaction
 - signData
+- signMessage
 - disconnect
 
 **Available events:**
@@ -265,7 +277,7 @@ Wallet doesn't accept any request with an id that does not greater the last proc
 type WalletResponse = WalletResponseSuccess | WalletResponseError;
 
 interface WalletResponseSuccess {
-    result: string;
+    result: string | object;
     id: string;
 }
 
@@ -310,6 +322,7 @@ Where `<transaction-payload>` is JSON string with following properties:
 * `network` (NETWORK, optional): The network (mainnet or testnet) where DApp intends to send the transaction. If not set, the transaction is sent to the network currently set in the wallet, but this is not safe and DApp should always strive to set the network. If the `network` parameter is set, but the wallet has a different network set, the wallet should show an alert and DO NOT ALLOW TO SEND this transaction.
 * `from` (string in raw or friendly format, optional) - The sender address from which DApp intends to send the transaction. If not set, wallet allows user to select the sender's address at the moment of transaction approval. If `from` parameter is set, the wallet should DO NOT ALLOW user to select the sender's address; If sending from the specified address is impossible, the wallet should show an alert and DO NOT ALLOW TO SEND this transaction.
 * `messages` (array of messages): 1 to wallet's `maxMessages` outgoing messages from the wallet contract to other accounts. All messages MUST be sent within a single external message and processed by the wallet contract in the provided order, however **the wallet cannot guarantee that messages will be delivered and executed in the same order by the recipient contracts**.
+* `items` (array of items): alternative to `messages` — structured items as defined in [Structured Items](#structured-items). A payload MUST contain either `messages` or `items`, never both.
 
 Message structure:
 * `address` (string): message destination in user-friendly format
@@ -339,6 +352,104 @@ To generate both address types using `@ton/core`:
 // No-bouncable format, for wallet contracts or expected-to-fail transactions
  const nonBouncable = address.toString({ urlSafe: true, bounceable: false });   // bounce = false
 ```
+
+##### Structured Items
+
+As an alternative to raw `messages`, the payload may contain an `items` array instead. Structured items describe **what** the user wants to do at a high level; the **wallet** constructs the corresponding BoC. A payload MUST contain either `messages` or `items`, never both.
+
+The wallet advertises supported item types via the `itemTypes` array in the `SendTransaction` feature. If `itemTypes` is absent, only raw `messages` are supported.
+
+```tsx
+type TransactionItem = TonItem | JettonItem | NftItem;
+```
+
+**TonItem** — simple TON transfer:
+
+| field            | type     | required | description                                         |
+|------------------|----------|----------|-----------------------------------------------------|
+| `type`           | `"ton"`  | yes      | Item discriminator                                  |
+| `address`        | string   | yes      | Destination in user-friendly format                 |
+| `amount`         | string   | yes      | Nanocoins as decimal string                         |
+| `payload`        | string   | no       | Raw one-cell BoC in Base64                          |
+| `stateInit`      | string   | no       | Raw one-cell BoC in Base64                          |
+| `extra_currency` | object   | no       | Extra currencies to send                            |
+
+**JettonItem** — Jetton transfer:
+
+| field                  | type       | required | description                                                   |
+|------------------------|------------|----------|---------------------------------------------------------------|
+| `type`                 | `"jetton"` | yes      | Item discriminator                                            |
+| `master`               | string     | yes      | Jetton master contract address                                |
+| `destination`          | string     | yes      | Recipient address                                             |
+| `amount`               | string     | yes      | Jetton amount in elementary units                             |
+| `attachAmount`         | string     | no       | TON to attach for fees; wallet calculates if omitted          |
+| `queryId`              | string     | no       | Arbitrary request number                                      |
+| `responseDestination`  | string     | no       | Where to send excess; wallet uses sender if omitted           |
+| `customPayload`        | string     | no       | Raw one-cell BoC in Base64                                    |
+| `forwardAmount`        | string     | no       | Nanotons to forward to destination; defaults to `"1"`         |
+| `forwardPayload`       | string     | no       | Raw one-cell BoC in Base64                                    |
+
+**NftItem** — NFT transfer:
+
+| field                  | type     | required | description                                                   |
+|------------------------|----------|----------|---------------------------------------------------------------|
+| `type`                 | `"nft"`  | yes      | Item discriminator                                            |
+| `nftAddress`           | string   | yes      | NFT item contract address                                     |
+| `newOwner`             | string   | yes      | New owner address                                             |
+| `attachAmount`         | string   | no       | TON to attach for fees; wallet calculates if omitted          |
+| `queryId`              | string   | no       | Arbitrary request number                                      |
+| `responseDestination`  | string   | no       | Where to send excess; wallet uses sender if omitted           |
+| `customPayload`        | string   | no       | Raw one-cell BoC in Base64                                    |
+| `forwardAmount`        | string   | no       | Nanotons to forward to new owner; defaults to `"1"`           |
+| `forwardPayload`       | string   | no       | Raw one-cell BoC in Base64                                    |
+
+<details>
+<summary>Structured items examples</summary>
+
+TON transfer:
+```json5
+{
+  "valid_until": 1764424242,
+  "items": [
+    {
+      "type": "ton",
+      "address": "UQAAAAA...AAJKZ",
+      "amount": "20000000",
+    }
+  ]
+}
+```
+
+Jetton transfer:
+```json5
+{
+  "valid_until": 1764424242,
+  "items": [
+    {
+      "type": "jetton",
+      "master": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
+      "destination": "UQAAAAA...AAJKZ",
+      "amount": "1000000",
+      "forwardAmount": "10000000"
+    }
+  ]
+}
+```
+
+NFT transfer:
+```json5
+{
+  "valid_until": 1764424242,
+  "items": [
+    {
+      "type": "nft",
+      "nftAddress": "EQ...",
+      "newOwner": "UQAAAAA...AAJKZ"
+    }
+  ]
+}
+```
+</details>
 
 <details>
 <summary>Common cases</summary>
@@ -585,6 +696,91 @@ If the data needs to be human-readable—but is not textual—use the **Cell** f
 
 Otherwise, use Binary format.
 
+#### Sign Message
+
+Unlike `sendTransaction`, the `signMessage` method asks the wallet to **sign** internal messages without broadcasting them to the network. The wallet returns the signed internal message BoC, which the app can use for deferred submission.
+
+> **Wallet behaviour note:** Even though the wallet does not broadcast the signed message, it MUST display a confirmation dialog warning the user that the signed message may transfer assets and could be submitted to the network later by the requesting application.
+
+The request payload has the same structure as `sendTransaction`.
+
+App sends **SignMessageRequest**:
+
+```tsx
+interface SignMessageRequest {
+	method: 'signMessage';
+	params: [<transaction-payload>];
+	id: string;
+}
+```
+
+Where `<transaction-payload>` is JSON with the same structure as in `sendTransaction`:
+
+* `valid_until` (integer, optional): unix timestamp. after the moment transaction will be invalid.
+* `network` (NETWORK, optional): The network (mainnet or testnet) where DApp intends to use the signed message. If not set, the wallet uses the network currently set in the wallet. If the `network` parameter is set, but the wallet has a different network set, the wallet should show an alert and DO NOT ALLOW TO SIGN this message.
+* `from` (string in raw or friendly format, optional) - The sender address from which DApp intends to sign the message. If not set, wallet allows user to select the sender's address at the moment of approval. If `from` parameter is set, the wallet should DO NOT ALLOW user to select the sender's address; If signing from the specified address is impossible, the wallet should show an alert and DO NOT ALLOW TO SIGN this message.
+* `messages` (array of messages): 1 to wallet's `maxMessages` outgoing messages from the wallet contract to other accounts. All messages MUST be built into a single internal message and processed by the wallet contract in the provided order, however **the wallet cannot guarantee that messages will be delivered and executed in the same order by the recipient contracts**. A payload MUST contain either `messages` or `items`, never both.
+* `items` (array of items): alternative to `messages` — structured items as defined in [Structured Items](#structured-items). A payload MUST contain either `messages` or `items`, never both.
+
+Message structure:
+* `address` (string): message destination in user-friendly format
+* `amount` (decimal string): number of nanocoins to send.
+* `payload` (string base64, optional): raw one-cell BoC encoded in Base64.
+* `stateInit` (string base64, optional): raw once-cell BoC encoded in Base64.
+* `extra_currency` (object, optional): extra currency to send with the message.
+
+<details>
+<summary>Example</summary>
+
+```json5
+{
+  "valid_until": 1658253458,
+  "network": "-239",
+  "from": "0:348bcf827469c5fc38541c77fdd91d4e347eac200f6f2d9fd62dc08885f0415f",
+  "messages": [
+    {
+      "address": "EQBBJBB3HagsujBqVfqeDUPJ0kXjgTPLWPFFffuNXNiJL0aA",
+      "amount": "20000000",
+      "payload": "base64bocblahblahblah=="
+    }
+  ]
+}
+```
+</details>
+
+
+**Wallet behaviour:**
+
+The wallet MUST construct each outgoing message with **send mode 3** (`PAY_GAS_SEPARATELY + IGNORE_ERRORS`).
+
+Wallet replies with **SignMessageResponse**:
+
+```tsx
+type SignMessageResponse = SignMessageResponseSuccess | SignMessageResponseError;
+
+interface SignMessageResponseSuccess {
+    result: {
+        internalBoc: string; // base64 encoded signed internal message BoC
+    };
+    id: string;
+}
+
+interface SignMessageResponseError {
+   error: { code: number; message: string };
+   id: string;
+}
+```
+
+**Error codes:**
+
+| code | description                |
+|------|----------------------------|
+| 0    | Unknown error              |
+| 1    | Bad request                |
+| 100  | Unknown app                |
+| 300  | User declined the request  |
+| 400  | Method not supported       |
+
 #### Disconnect operation
 When user disconnects the wallet in the dApp, dApp should inform the wallet to help the wallet save resources and delete unnecessary session.
 Allows the wallet to update its interface to the disconnected state.
@@ -648,6 +844,7 @@ type ConnectEventSuccess = {
         items: ConnectItemReply[];
         device: DeviceInfo;
     }
+    response?: WalletResponse; // present when an embedded request (`e` parameter) was processed
 }
 type ConnectEventError = {
     event: "connect_error",
@@ -658,3 +855,5 @@ type ConnectEventError = {
     }
 }
 ```
+
+The `response` field is only present when the wallet processed an [embedded request](bridge.md#embedded-requests). See the [bridge specification](bridge.md#embedded-requests) for the wire format and examples.
