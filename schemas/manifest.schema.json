@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ton-blockchain/ton-connect/spec/schemas/manifest.schema.json",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/manifest.schema.json",
   "title": "TON Connect app manifest",
   "description": "Schema for `tonconnect-manifest.json`. The wallet fetches this file before showing the connect prompt and displays the metadata to the user. See `spec/manifest.md`.",
   "type": "object",

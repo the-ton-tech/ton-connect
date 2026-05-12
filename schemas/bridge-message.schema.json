@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ton-blockchain/ton-connect/spec/schemas/bridge-message.schema.json",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/bridge-message.schema.json",
   "title": "TON Connect bridge message",
   "description": "Envelope the HTTP bridge writes to a recipient's SSE stream when forwarding a message from one `client_id` to another. Bridge operators MAY add deployment-specific fields beyond those listed here. See `spec/bridge.md#bridgemessage-envelope`.",
   "type": "object",

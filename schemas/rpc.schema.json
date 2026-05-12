@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ton-blockchain/ton-connect/spec/schemas/rpc.schema.json",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/rpc.schema.json",
   "title": "TON Connect RPC payloads",
   "description": "RPC format for messages flowing inside the encrypted HTTP-bridge channel: `AppRequest` (dApp -> wallet), `WalletResponse` (wallet -> dApp), `WalletEvent` (wallet -> dApp). Per-method request payloads are validated through `contentSchema` (JSON Schema draft 2020-12); validators that ignore `contentSchema` treat the `params` entries as opaque JSON strings. `ConnectRequest` is delivered out-of-band through the deep link and is not part of this schema. See `spec/rpc.md`.",
   "oneOf": [

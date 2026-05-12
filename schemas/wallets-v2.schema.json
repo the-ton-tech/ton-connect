@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/ton-blockchain/ton-connect/spec/schemas/wallets-v2.schema.json",
+  "$id": "https://github.com/ton-blockchain/ton-connect/schemas/wallets-v2.schema.json",
   "title": "TON Connect wallets list",
   "description": "Schema for the TON Connect wallets registry: an array of wallet entries describing display metadata, supported bridges, platforms and TON Connect features.",
   "type": "array",
