@@ -352,7 +352,7 @@ For general wallet UX and confirmation requirements, see [`guides/wallet-guideli
 
 - `text` — display the `text` field verbatim, monospace, with forced line breaks. The user SHOULD scroll long text before signing.
 - `binary` — display a warning that the content being signed is unknown.
-- `cell` — the wallet MAY parse the cell against `schema`. Otherwise display a warning that the content is unknown. If `schema` is unparseable or `cell` does not match it, display the same warning.
+- `cell` — the wallet MAY parse the cell against `schema`. Otherwise, wallet MUST display a warning that the content is unknown. If `schema` is unparseable or `cell` does not match it, wallet MUST display the same warning.
 
 ### Response
 
