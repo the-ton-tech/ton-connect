@@ -248,7 +248,7 @@ Verifying a `TonProofItemReply` involves four steps:
    1. Reconstruct the message bytes (see [Byte layout](#byte-layout)) and compute the `hash` (see [Signature](#signature)).
    2. Verify that `proof.signature` corresponds to `hash` and `publicKey`.
 
-The local-parsing path is preferred. The on-chain fallback exists for wallets whose contract code is not yet recognised by the verifier. Prioritising local parsing reduces RPC load.
+The local-parsing path is preferred. The on-chain fallback exists for wallets whose contract code is not yet recognised by the verifier. Prioritising local parsing reduces RPC calls.
 
 ## Conformance
 

@@ -47,8 +47,8 @@ Users who switch by accident often cannot find the way back. dApps should host d
 If the dApp's `network` field differs from the wallet's current network:
 
 - Show an alert.
-- The wallet SHOULD NOT allow the user to send the transaction.
-- The wallet SHOULD NOT offer to switch networks.
+- The wallet MUST NOT allow the user to send the transaction.
+- The wallet MUST NOT offer to switch networks.
 
 This protects the user from sending real funds on mainnet when the dApp expects testnet, or vice versa.
 

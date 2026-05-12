@@ -8,18 +8,18 @@ The SDK fetches the file at runtime to render the wallet picker.
 
 ## Entry fields
 
-| Field           | Required    | Type     | Description                                                         |
-|-----------------|-------------|----------|---------------------------------------------------------------------|
+| Field           | Required    | Type     | Description                                                                                                                                                        |
+|-----------------|-------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `app_name`      | yes         | string   | Wallet identifier (non-empty). MUST match the wallet's runtime `DeviceInfo.appName`. When the entry includes a `js` bridge, SHOULD also equal that bridge's `key`. |
-| `name`          | yes         | string   | Display name shown in the wallet picker (non-empty).                |
-| `image`         | yes         | string   | HTTPS URL of a PNG icon — MUST end in `.png` (lowercase extension). |
-| `about_url`     | yes         | string   | HTTPS URL to the wallet's info or landing page.                     |
-| `universal_url` | conditional | string   | HTTPS base for the wallet's universal link. REQUIRED when the entry lists an `sse` bridge; MAY be omitted otherwise. |
-| `deepLink`      | conditional | string   | Custom-scheme deep link, e.g. `tonkeeper-tc://`. SHOULD be provided when the entry lists an `sse` bridge; MAY be omitted otherwise. |
-| `tondns`        | no          | string   | TON DNS name ending in `ton`. Reserved for future use by the protocol. |
-| `bridge`        | yes         | array    | One or two bridge entries — see [`bridge`](#bridge).                |
-| `platforms`     | yes         | string[] | Platforms the wallet supports — see [`platforms`](#platforms).      |
-| `features`      | yes         | array    | TON Connect feature entries — see [`features`](#features). |
+| `name`          | yes         | string   | Display name shown in the wallet picker (non-empty).                                                                                                               |
+| `image`         | yes         | string   | HTTPS URL of a PNG icon — MUST end in `.png` (lowercase extension).                                                                                                |
+| `about_url`     | yes         | string   | HTTPS URL to the wallet's info or landing page.                                                                                                                    |
+| `universal_url` | conditional | string   | HTTPS base for the wallet's universal link. REQUIRED when the entry lists an `sse` bridge; MAY be omitted otherwise.                                               |
+| `deepLink`      | conditional | string   | Custom-scheme deep link, e.g. `tonkeeper-tc://`. SHOULD be provided when the entry lists an `sse` bridge; MAY be omitted otherwise.                                |
+| `tondns`        | no          | string   | TON DNS name ending in `.ton`. Reserved for future use by the protocol.                                                                                            |
+| `bridge`        | yes         | array    | One or two bridge entries — see [`bridge`](#bridge).                                                                                                               |
+| `platforms`     | yes         | string[] | Platforms the wallet supports — see [`platforms`](#platforms).                                                                                                     |
+| `features`      | yes         | array    | TON Connect feature entries — see [`features`](#features).                                                                                                         |
 
 The `image` icon SHOULD be 288×288 px, on a non-transparent background, without rounded corners. Authors SHOULD compress the PNG with `pngquant`, ImageMagick or TinyPNG to reduce bandwidth.
 
