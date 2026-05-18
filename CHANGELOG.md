@@ -4,9 +4,9 @@ This changelog tracks protocol-affecting changes to TON Connect — new RPC meth
 
 Format: each section starts with a date heading `## Month Day, Year`, followed by a bold version line `**TON Connect <YYYY.MM.DD>**`. Bullets begin with a past-tense verb: **Added**, **Replaced**, **Allowed**, **Fixed**, **Removed**, **Deprecated**. Each bullet names the affected identifier in `code font`. One bullet per change. No paragraphs.
 
-## May 12, 2026
+## May 18, 2026
 
-**TON Connect 2026.05.12**
+**TON Connect 2026.05.18**
 
 - **Added** optional `trace_id` query parameter to bridge `GET /events` and `POST /message` for analytics correlation. UUIDv7 is recommended.
 - **Added** optional `trace_id` query parameter to connect URLs for end-to-end analytics correlation.
@@ -14,11 +14,6 @@ Format: each section starts with a date heading `## Month Day, Year`, followed b
 - **Added** `NETWORK_ID` type (`NETWORK | string`) carried on every `network` field; any TON network `global_id` is now valid, not only `-239` and `-3`.
 - **Added** optional `network` field on `TonAddressItem` so a dApp can request connection to a specific TON network.
 - **Replaced** `network: NETWORK` on `TonAddressItemReply` and the `network` parameter of `sendTransaction`, `signMessage` and `signData` with `NETWORK_ID`.
-
-## May 6, 2026
-
-**TON Connect 2026.05.06**
-
 - **Added** `signMessage` RPC method.
 - **Added** `SignMessage` feature entry.
 - **Added** structured `items` arrays to `sendTransaction` and `signMessage`, with `ton`, `jetton` and `nft` discriminator types, plus the matching `itemTypes` Feature parameter.
